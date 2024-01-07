@@ -1,0 +1,44 @@
+Entities:
+
+Buildings
+Paths
+Substances
+  Elements
+  Molecules
+
+
+Buildings:
+
+Fuser - Combines two of the same element to increase element number
+Compounder -
+
+
+
+
+Elements
+Alf
+Brav
+Char
+Delt
+Ech
+Fox
+Golf
+Hot
+Ind
+Jul
+Kil
+Lim
+Mik
+Nov,
+Osc
+Papa
+Que
+Rom
+Sie
+Tan
+Uni
+Vic
+Whis
+Xay
+Yank
+Zul
