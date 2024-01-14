@@ -40,7 +40,11 @@
 	  height: 100%;
 	  vertical-align: middle;
 	  margin: auto;
-	  font-size: 5cqw;
+	  font-size: 10cqw;
+	  position:fixed;
+      }
+      .button.selected {
+	  background-color: green;
       }
       
       
@@ -50,14 +54,21 @@
   <body>
     <div id="container"></div>
     <div id="bottom-bar">
-      <div class="button">
-	<span class="button-text">A</span>
+      <div class="button" data-type="">
+	<span class="button-text">Cursor</span>
+	<!--<img src="straight.png" width="100%" height="100%">-->
       </div>
-      <div class="button">
-	<span class="button-text">B</span>
+      <div class="button" data-type="straight">
+	<span class="button-text">Straight</span>
+	<img src="straight.png" width="100%" height="100%">
       </div>
-      <div class="button">
-	<span class="button-text">C</span>
+      <div class="button" data-type="slight_turn">
+	<span class="button-text">Slight Turn</span>
+	<img src="slight_turn.png" width="100%" height="100%">
+      </div>
+      <div class="button" data-type="join">
+	<span class="button-text">Join</span>
+	<img src="join.png" width="100%" height="100%">
       </div>
       <div class="button">
 	<span class="button-text">D</span>
