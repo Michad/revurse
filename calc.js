@@ -66,6 +66,13 @@ class ScreenCoordinate {
 	this.x = x;
 	this.y = y;
     }
+
+    interpolate(other, percentage) {
+	return new ScreenCoordinate(
+	    this.x * (1-percentage) + other.x * percentage,
+	    this.y * (1-percentage) + other.y * percentage
+	);
+    }
 }
 
 class GridCoordinate {
@@ -85,6 +92,29 @@ class GridCoordinate {
     toIndex() {
 	return this.x * Y_COUNT + this.y;
     }
+
+    findNeighbor(rot) {
+	rot = rot % 360;
+	if(rot >= 330 || rot < 30) {
+	    if(this.y > 1)
+		return new GridCoordinate(this.x, this.y-1);
+	} else if(rot < 90) {
+	    if(this.x < X_COUNT && this.y > 0)
+		return new GridCoordinate(this.x+1, this.y + (this.x%2 ? 0 : -1) );
+	} else if (rot < 150) {
+	    if(this.x < X_COUNT)
+		return new GridCoordinate(this.x+1,this.y + (this.x%2 ? 1 : 0) );
+	} else if (rot < 210) {
+	    if(this.y < Y_COUNT)
+		return new GridCoordinate(this.x, this.y+1);
+	} else if (rot < 270) {
+	    if(this.x > 0 && this.x > 0)
+		return new GridCoordinate(this.x-1,this.y + (this.x%2 ? 1 : 0) );
+	} else if (rot < 330) {
+	    if(this.x > 0 && this.y > 0)
+		return new GridCoordinate(this.x-1, this.y + (this.x%2 ? 0 : -1) );
+	}
+    }
 }
 
 
@@ -92,30 +122,163 @@ class Cell {
     type = null;
     view = null;
     coordinate = new GridCoordinate(0,0);
+    molecules = new Set();
+    rotation = 0;
 
-    constructor(type, coordinate, view) {
+    constructor(type, coordinate, view, rotation) {
 	this.type = type;
 	this.coordinate = coordinate;
 	this.view = view;
 	this.view.model = this;
+	this.rotation = rotation;
     }
 
     remove() {
 	this.view.remove();
+	this.molecules.forEach((m) => m.remove());
+    }
+
+    update() {
+
+    }
+
+    canAccept(fromCell) {
+	return true;
+    }
+
+    onDeparture(molecule) {
+	this.molecules.delete(molecule);
+    }
+
+    onArrival(molecule) {
+	this.molecules.add(molecule);
+	//Todo: inheritance
+	if(this.type === "straight") {
+	    return this.coordinate.findNeighbor(this.rotation);
+	}
+	if(this.type === "slight_turn") {
+	    let r = this.coordinate.findNeighbor(this.rotation);
+	    console.log(JSON.stringify(this.coordinate) + " with rot of " + this.rotation + " goes to " + JSON.stringify(r));
+	    return r;
+	}
+    }
+}
+
+class Molecule {
+    transition = 0;
+    world = null;
+    formula = null;
+    currentCell = null;
+    nextCoord = null;
+    view = null;
+
+    constructor(world, formula, layer) {
+	this.world = world;
+	this.formula = formula;
+	this.view = this.draw(layer);
+    }
+
+    speed() {
+	return 1.0;
+    }
+
+    setCell(currentCell) {
+	this.transition = 0;
+
+	this.currentCell?.onDeparture(this);
+	this.currentCell = currentCell;
+	this.nextCoord = this.currentCell.onArrival(this);
+    }
+
+    findNextCell() {
+	return this.nextCoord ? this.world.findCell(this.nextCoord) : null
+    }
+
+    update(deltaT) {
+	let nextCell = this.findNextCell();
+	if(nextCell) {
+	    this.transition += deltaT / this.speed();
+	}
+	if(this.transition >= 1) {
+	    this.setCell(nextCell);
+	}
+	this.updateView();
+    }
+
+    draw(layer) {
+	let text = new Konva.Text({
+	    x: 0,
+	    y: 0,
+	    text: this.formula,
+	    fontSize: 30,
+	    fontFamily: 'Calibri',
+	    fill: 'orange',
+	    align: 'center'
+	});
+
+	text.offsetX(text.width() / 2);
+	text.offsetY(text.height() / 2);
+
+	layer.add(text);
+
+	return text;
+    }
+
+    updateView() {
+	let pos = null;
+	let nextCell = this.findNextCell();
+	if(nextCell) {
+	    pos = gridToScreen(this.currentCell.coordinate)
+		.interpolate(gridToScreen(nextCell.coordinate), this.transition);
+	} else {
+	    pos = gridToScreen(this.currentCell.coordinate);
+	}
+
+	//console.log(JSON.stringify(pos));
+	this.view.position(pos);
+    }
+
+    remove() {
+	this.view.remove();
+	this.world.molecules.delete(this);
     }
 }
 
 class World {
     gridLayer = null;
     cellLayer = null;
+    moleculeLayer = null;
     cells = null;
     grids = null;
+    molecules = new Set();
 
-    constructor(gridLayer, cellLayer, cells, grids) {
+    constructor(gridLayer, cellLayer, moleculeLayer, cells, grids) {
 	this.gridLayer = gridLayer;
 	this.cellLayer = cellLayer;
+	this.moleculeLayer = moleculeLayer;
 	this.cells = cells || Array.apply(null, Array(X_COUNT*Y_COUNT)).map(function () {});
 	this.grids = grids || Array.apply(null, Array(X_COUNT*Y_COUNT)).map(function () {});
+    }
+
+    addMolecule(formula, gridCoord) {
+	let m = new Molecule(this, formula, this.moleculeLayer);
+
+	let c = this.findCell(gridCoord);
+
+	if(c) {
+	    m.setCell(c);
+
+	    this.molecules.add(m);
+	}
+    }
+
+    update(deltaT) {
+	this.cells.forEach( (c) => c && c.update(deltaT) );
+	this.molecules.forEach( (m) => m && m.update(deltaT) );
+    }
+
+    findCell(gridCoord) {
+	return this.cells[gridCoord.toIndex()];
     }
 
     loadGrid(gridCoord, isEdge) {
@@ -135,11 +298,30 @@ class World {
 		    opacity : 0.5,*/
 	    rotation: 30
 	});
+
+	let text = new Konva.Text({
+	    x: screenCoord.x- 30,
+	    y: screenCoord.y - 30,
+	    text: "{"+gridCoord.x+","+gridCoord.y+"}",
+	    fontSize: 30,
+	    fontFamily: 'Calibri',
+	    fill: 'black',
+	    align: 'center'
+	});
+
 	
 	if(!isEdge) {
 	    hex.on('click', (e) => {
-		this.clickCell(gridCoord);
+		if(e.evt.shiftKey) {
+		    this.addMolecule(calculateElementName(parseInt(Math.random()*1000), true), gridCoord);
+		} else {
+		    this.clickCell(gridCoord);
+		}
 	    });
+
+	    hex.on('rightclick', (e) => {
+	    });
+
 	    
 	    /*hex.clicked = false;
 	      
@@ -150,9 +332,10 @@ class World {
 	      });*/
 	}
 
-	let gridCell = new Cell('grid', gridCoord, hex);
+	let gridCell = new Cell('grid', gridCoord, hex, 0);
 	//hex.model = gridCe
 	this.gridLayer.add(hex);
+	//this.gridLayer.add(text);
 	this.grids[gridCoord.toIndex()] = gridCell;
 	
 	return hex;
@@ -174,7 +357,7 @@ class World {
 	imageObj.onload = function() {
 	    let node = new Konva.Image({image: imageObj});
 	//Konva.Image.fromURL(window.currentSelection.img(), function (node) {
-	    let cell = new Cell(window.currentSelection.type, gridCoord, node);
+	    let cell = new Cell(window.currentSelection.type, gridCoord, node, window.currentSelection.rotation ?? 0);
 
 	    node.model = cell;
             node.setAttrs({
@@ -189,11 +372,15 @@ class World {
 	    if(window.currentSelection.rotation) {
 		rotateAroundCenter(node, window.currentSelection.rotation);
 	    }
-	    
+
+	    node.listening(false);
+
+	    /*
 	    node.on('click', (e) => {
 		let clickCoord = self.gridLayer.getIntersection(stage.getPointerPosition()).model.coordinate;
 		self.clickCell(clickCoord);
-	    });
+		});
+		*/
 	    
             self.cellLayer.add(node);
 	    self.cells[gridCoord.toIndex()] = cell;
@@ -350,19 +537,22 @@ function init() {
 
 	window.baseLayer = Konva.Node.create(rawWorld.gridLayer);
 	window.cellLayer = Konva.Node.create(rawWorld.cellLayer);
-	window.world = new World(baseLayer, cellLayer, rawWorld.cells, rawWorld.grids);
+	window.moleculeLayer = new Konva.Layer();
+	
+	window.world = new World(baseLayer, cellLayer, moleculeLayer, rawWorld.cells, rawWorld.grids);
     } else {
 	
 	window.baseLayer = new Konva.Layer();
 	window.cellLayer = new Konva.Layer();
+	window.moleculeLayer = new Konva.Layer();
+	
 
-	window.world = new World(baseLayer, cellLayer, null);
+	window.world = new World(baseLayer, cellLayer, moleculeLayer, null);
 	newWorld = true;
     }
 
     window.cursorLayer = new Konva.Layer();
-
-
+    
     window.X_MIN=0;
     window.X_MAX=Math.min(stage.width(), stage.height());
     window.Y_MIN=0;
@@ -417,11 +607,19 @@ function init() {
 	    cellLayer.remove();
 	    window.baseLayer = new Konva.Layer();
 	    window.cellLayer = new Konva.Layer();
+	    window.moleculeLayer = new Konva.Layer();
 
-	    window.world = new World(baseLayer, cellLayer, null);
+	    window.world = new World(baseLayer, cellLayer, moleculeLayer, null);
+	    world.initializeGrid();
 
 	    stage.add(baseLayer);
 	    stage.add(cellLayer);
+	    stage.add(moleculeLayer);
+
+	    baseLayer.zIndex(0);
+	    cellLayer.zIndex(1);
+	    moleculeLayer.zIndex(2);
+	    cursorLayer.zIndex(3);
 	    
 	    e.preventDefault();
 	    return false;
@@ -478,7 +676,15 @@ function init() {
     
     stage.add(baseLayer);
     stage.add(cellLayer);
+    stage.add(moleculeLayer);
     stage.add(cursorLayer);
+
+
+    baseLayer.zIndex(0);
+    cellLayer.zIndex(1);
+    moleculeLayer.zIndex(2);
+    cursorLayer.zIndex(3);
+
     
     /*layer.clipX(X_MIN);
     layer.clipWidth(X_MAX-X_MIN);
@@ -495,7 +701,15 @@ function init() {
 
     stage.position({x:0,y:-POLY_HEIGHT/2});
     //stage.position({x:-X_MIN,y:-Y_MIN});
-    //stage.size({width:X_MAX-X_MIN,height:Y_MAX-Y_MIN});    
+    //stage.size({width:X_MAX-X_MIN,height:Y_MAX-Y_MIN});
+
+    window.lastUpdateTime = new Date().valueOf();
+    setInterval(function() {
+	let now = new Date().valueOf();
+	
+	world.update((now - lastUpdateTime)/1000.0);
+	lastUpdateTime = now;
+    }, 100);
 
     //unit tests
 
