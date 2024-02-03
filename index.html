@@ -54,19 +54,27 @@
   <body>
     <div id="container"></div>
     <div id="bottom-bar">
-      <div class="button" data-type="">
+      <div class="button" data-tool="cursor">
 	<span class="button-text">Cursor</span>
 	<!--<img src="straight.png" width="100%" height="100%">-->
       </div>
-      <div class="button" data-type="straight">
+      <div class="button" data-tool="erase">
+	<span class="button-text">Erase</span>
+	<!--<img src="straight.png" width="100%" height="100%">-->
+      </div>
+      <div class="button" data-tool="molecule">
+	<span class="button-text">Add Random Molecule</span>
+	<!--<img src="straight.png" width="100%" height="100%">-->
+      </div>
+      <div class="button" data-tool="place" data-cell="straight">
 	<span class="button-text">Straight</span>
 	<img src="straight.png" width="100%" height="100%">
       </div>
-      <div class="button" data-type="slight_turn">
+      <div class="button" data-tool="place" data-cell="slight_turn">
 	<span class="button-text">Slight Turn</span>
 	<img src="slight_turn.png" width="100%" height="100%">
       </div>
-      <div class="button" data-type="join">
+      <div class="button" data-tool="place" data-cell="join">
 	<span class="button-text">Join</span>
 	<img src="join.png" width="100%" height="100%">
       </div>

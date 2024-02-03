@@ -31,7 +31,6 @@ const ELEMENT_NAME_PARTS = [
 ];
 
 
-
 function calculateElementName(num, isSymbol) {
     num--;
     let nameArr = [];
@@ -63,8 +62,22 @@ class ScreenCoordinate {
     y = 0;
 
     constructor(x, y) {
-	this.x = x;
-	this.y = y;
+	if(x && x.x !== undefined && x.y !== undefined) {
+	    //Copy constructor
+	    this.x = x.x;
+	    this.y = x.y;
+	} else {
+	    this.x = x;
+	    this.y = y;
+	}
+    }
+
+    minus(other) {
+	return new ScreenCoordinate(this.x - other.x, this.y - other.y);
+    }
+
+    scale(factor) {
+	return new ScreenCoordinate(this.x * factor, this.y * factor);
     }
 
     interpolate(other, percentage) {
@@ -150,7 +163,7 @@ class Cell {
     }
 
     remove() {
-	this.view.remove();
+	this.view?.remove();
 	this.molecules.forEach((m) => m.remove());
     }
 
@@ -182,6 +195,7 @@ class Cell {
             self.layer.add(node);
 	    
 	};
+	//imageObj.crossOrigin = 'Anonymous';
 	imageObj.src = self.model.img;
     }
 
@@ -275,6 +289,7 @@ class Molecule {
 	    align: 'center'
 	});
 
+	text.listening(false);
 	text.offsetX(text.width() / 2);
 	text.offsetY(text.height() / 2);
 
@@ -298,7 +313,7 @@ class Molecule {
     }
 
     remove() {
-	this.view.remove();
+	this.view?.remove();
 	this.world.molecules.delete(this);
     }
 }
@@ -381,11 +396,7 @@ class World {
 	
 	if(!isEdge) {
 	    hex.on('click', (e) => {
-		if(e.evt.shiftKey) {
-		    this.addMolecule(new MoleculeModel(gridCoord.toIndex(), 0, calculateElementName(parseInt(Math.random()*1000), true)));
-		} else {
-		    this.clickCell(gridCoord);
-		}
+		this.clickCell(gridCoord);
 	    });
 
 	    hex.on('rightclick', (e) => {
@@ -401,9 +412,16 @@ class World {
 
 
     clickCell(gridCoord) {
-	//TODO: add tools besides placing cell
-	if(window.currentSelection.type) {
-	    this.initCell(new CellModel(gridCoord.toIndex(), window.currentSelection.type, window.currentSelection.rotation ?? 0, window.currentSelection.img()));
+	switch(window.currentSelection.tool) {
+	case "place":
+	    this.initCell(new CellModel(gridCoord.toIndex(), window.currentSelection.cellType, window.currentSelection.rotation ?? 0, window.currentSelection.img()));
+	    break;
+	case "molecule":
+	    this.addMolecule(new MoleculeModel(gridCoord.toIndex(), 0, calculateElementName(parseInt(Math.random()*1000), true)));
+	    break;
+	case "erase":
+	    this.removeCell(gridCoord);
+	    break;
 	}
     }
     
@@ -412,12 +430,17 @@ class World {
 
 	let cell = new Cell(cellModel, this.cellLayer);
 
+	this.removeCell(gridCoord);
+	this.cells[gridCoord.toIndex()] = cell;
+    }
+
+    removeCell(gridCoord) {
 	let curCell = this.cells[gridCoord.toIndex()];
 	if(curCell) {
 	    curCell.remove();
 	}
-
-	this.cells[gridCoord.toIndex()] = cell;
+	
+	this.cells[gridCoord.toIndex()] = null;
     }
 
     toJson() {
@@ -520,7 +543,7 @@ function makeImage() {
 }
 
 function loadHoverCell(layer, initialPos) {
-	if(window.currentSelection.type) {
+	if(window.currentSelection.cellType) {
 	    var imageObj = new Image();
 	    imageObj.onload = function() {
 		let node = new Konva.Image({image: imageObj});
@@ -543,6 +566,8 @@ function loadHoverCell(layer, initialPos) {
 		layer.add(node);
 		window.hoverNode = node;
 	    };
+	    
+	    //imageObj.crossOrigin = 'Anonymous';
 	    imageObj.src = window.currentSelection.img();
 	}
     }
@@ -577,58 +602,38 @@ function init() {
     X_MAX=(stage.width()+(X_COUNT)*POLY_ROW_WIDTH)/2-(POLY_WIDTH-POLY_ROW_WIDTH)+2.5;//+0.5*POLY_WIDTH;
     Y_MAX=(stage.height()+(Y_COUNT)*POLY_HEIGHT)/2+0.5*POLY_HEIGHT+2.5;
     
-    window.scaleBy = 1.05;
 
-        let newWorld = true;
+    window.baseLayer = new Konva.Layer();
+    window.cellLayer = new Konva.Layer();
+    window.moleculeLayer = new Konva.Layer();
+
+    let rawWorld = null;
     if(localStorage.world) {
 	console.log("Loading... " + localStorage.world);
-	let rawWorld = JSON.parse(localStorage.world);
-
-	window.baseLayer = new Konva.Layer();
-	window.cellLayer = new Konva.Layer();
-	window.moleculeLayer = new Konva.Layer();
-	
-	window.world = new World(baseLayer, cellLayer, moleculeLayer, rawWorld);
-    } else {
-	window.baseLayer = new Konva.Layer();
-	window.cellLayer = new Konva.Layer();
-	window.moleculeLayer = new Konva.Layer();
-	
-
-	window.world = new World(baseLayer, cellLayer, moleculeLayer, null);
-	newWorld = true;
-    }
+	rawWorld = JSON.parse(localStorage.world);
+    } 
+    window.world = new World(baseLayer, cellLayer, moleculeLayer, rawWorld);
 
     
     stage.on('wheel', (e) => {
-	// stop default scrolling
+	const SCALE_FACTOR = 1.10;
+	
 	e.evt.preventDefault();
 	
-	var oldScale = stage.scaleX();
-	var pointer = stage.getPointerPosition();
+	let curScale = stage.scaleX();
+	let pointer = new ScreenCoordinate(stage.getPointerPosition());
+	let stagePos = new ScreenCoordinate(stage.getPosition());
+	let center = new ScreenCoordinate(stage.getWidth(), stage.getHeight()).scale(0.5);
 	
-	var mousePointTo = {
-            x: (pointer.x - stage.x()) / oldScale,
-            y: (pointer.y - stage.y()) / oldScale,
-	};
-	
-	// how to scale? Zoom in? Or zoom out?
-	let direction = e.evt.deltaY < 0 ? 1 : -1;
-	
-	// when we zoom on trackpad, e.evt.ctrlKey is true
-	// in that case lets revert direction
-	if (e.evt.ctrlKey) {
-            direction = -direction;
-	}
-	
-	var newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-	
+	let newScale = curScale * (e.evt.deltaY < 0 ? SCALE_FACTOR : 1.0 / SCALE_FACTOR);
 	stage.scale({ x: newScale, y: newScale });
-	
-	var newPos = {
-            x: pointer.x - mousePointTo.x * newScale,
-            y: pointer.y - mousePointTo.y * newScale,
-	};
+
+	//TODO: decide which to go with
+	//Center on cursor
+	//let newPos = pointer.minus(pointer.minus(stagePos).scale(newScale / curScale));
+	//Center on center
+	let newPos = center.minus(center.minus(stagePos).scale(newScale / curScale));
+
 	stage.position(newPos);
     });
 
@@ -673,33 +678,34 @@ function init() {
 
     stage.on('mousemove', function(e) {
 	if(window.hoverNode) {
-	    if(!e.evt.movementX && !e.evt.movementY) {
+	    //if(!e.evt.movementX && !e.evt.movementY) {
 		hoverNode.rotation(0);
 		hoverNode.offset({x:0,y:0});
-		hoverNode.position({x: e.evt.x+1, y:e.evt.y});
+	    hoverNode.position({x: e.evt.x - hoverNode.width()/5, y:e.evt.y + hoverNode.height()/4});
 		rotateAroundCenter(hoverNode, currentSelection.rotation);
-	    } else {
-		hoverNode.move({x: e.evt.movementX , y: e.evt.movementY});
-	    }
+	    //} else {
+	    //hoverNode.move({x: e.evt.movementX , y: e.evt.movementY});
+	    //}
 	}
     });
 
     document.querySelectorAll('.button')
 	.forEach((b, i) => b.addEventListener('click', function(e) {
-	    let type = b.attributes['data-type'].value;
-	    let href = b.getElementsByTagName("img")[0]?.attributes["src"].value;
+	    let tool = b.attributes['data-tool']?.value;
+	    let cellType = b.attributes['data-cell']?.value;
+	    let href = b.getElementsByTagName("img")[0]?.attributes["src"]?.value;
 	    
 	    document.querySelectorAll('.selected').forEach((s) => s.classList.remove('selected'));
 	    b.classList.add('selected'); 
 
-	    window.currentSelection = {type: type, img: () => href, rotation: 0};
+	    window.currentSelection = {tool: tool, cellType: cellType, img: () => href, rotation: 0};
 
 	    if(window.hoverNode) {
 		window.hoverNode.remove();
 		delete window.hoverNode;
 	    }
 
-	    if(type) {
+	    if(cellType) {
 		loadHoverCell(cursorLayer, stage.getPointerPosition());
 	    }
 	    
@@ -727,10 +733,10 @@ function init() {
     //setInterval(function() { console.log(stage.position());}, 1000);
 
 
-    if(newWorld) world.initializeGrid();
+    world.initializeGrid();
 
 
-    window.currentSelection = {type: 'meta1', img: makeImage};
+    window.currentSelection = {cellType: 'meta1', img: makeImage};
 
     stage.position({x:0,y:-POLY_HEIGHT/2});
     //stage.position({x:-X_MIN,y:-Y_MIN});
