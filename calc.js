@@ -117,25 +117,72 @@ class GridCoordinate {
     }
 }
 
+class CellModel {
+    constructor(index, type, rotation, img) {
+	this.index = index;
+	this.type = type;
+	this.rotation = rotation;
+	this.img = img;
+    }
+}
+
 
 class Cell {
-    type = null;
+    model = null;
+    layer = null;
     view = null;
     coordinate = new GridCoordinate(0,0);
     molecules = new Set();
-    rotation = 0;
 
-    constructor(type, coordinate, view, rotation) {
-	this.type = type;
-	this.coordinate = coordinate;
-	this.view = view;
-	this.view.model = this;
-	this.rotation = rotation;
+    constructor(model, layer, overrideView) {
+	this.model = model;
+	this.coordinate = new GridCoordinate(model.index);
+	this.layer = layer;
+	if(overrideView) {
+	    this.view = overrideView;
+	} else {
+	    this.draw();
+	}
+    }
+
+    toJsonData() {
+	return this.model;
     }
 
     remove() {
 	this.view.remove();
 	this.molecules.forEach((m) => m.remove());
+    }
+
+    draw() {
+	let self = this;
+	var imageObj = new Image();
+	let screnCoord = gridToScreen(self.coordinate);
+
+	imageObj.onload = function() {
+	    let node = new Konva.Image({image: imageObj});
+	    self.view = node;
+
+	    node.model = self;
+            node.setAttrs({
+		x: screnCoord.x - POLY_WIDTH/2 - BORDER_BUFFER_X / 2,
+		y: screnCoord.y - POLY_HEIGHT/2 - POLY_HEIGHT/Y_COUNT/2-BORDER_BUFFER/2,
+		width: POLY_WIDTH + BORDER_BUFFER_X,
+		height: POLY_HEIGHT + POLY_HEIGHT/Y_COUNT+BORDER_BUFFER,
+		cornerRadius: 0,
+		opacity:0.75
+            });
+
+	    if(self.model.rotation) {
+		rotateAroundCenter(node, self.model.rotation);
+	    }
+
+	    node.listening(false);
+	    
+            self.layer.add(node);
+	    
+	};
+	imageObj.src = self.model.img;
     }
 
     update() {
@@ -153,40 +200,52 @@ class Cell {
     onArrival(molecule) {
 	this.molecules.add(molecule);
 	//Todo: inheritance
-	if(this.type === "straight") {
-	    return this.coordinate.findNeighbor(this.rotation);
+	if(this.model.type === "straight") {
+	    return this.coordinate.findNeighbor(this.model.rotation);
 	}
-	if(this.type === "slight_turn") {
-	    let r = this.coordinate.findNeighbor(this.rotation);
-	    console.log(JSON.stringify(this.coordinate) + " with rot of " + this.rotation + " goes to " + JSON.stringify(r));
+	if(this.model.type === "slight_turn") {
+	    let r = this.coordinate.findNeighbor(this.model.rotation);
+	    //console.log(JSON.stringify(this.coordinate) + " with rot of " + this.rotation + " goes to " + JSON.stringify(r));
 	    return r;
 	}
     }
 }
 
+class MoleculeModel {
+    constructor(cellIndex, transition, formula) {
+	this.cellIndex = cellIndex;
+	this.transition = transition;
+	this.formula = formula;
+    }
+}
+
 class Molecule {
-    transition = 0;
+    model = null;
     world = null;
-    formula = null;
     currentCell = null;
     nextCoord = null;
     view = null;
 
-    constructor(world, formula, layer) {
+    constructor(world, moleculeModel, layer) {
 	this.world = world;
-	this.formula = formula;
+	this.model = moleculeModel;
 	this.view = this.draw(layer);
+    }
+
+    toJsonData() {
+	return this.model;
     }
 
     speed() {
 	return 1.0;
     }
 
-    setCell(currentCell) {
-	this.transition = 0;
+    setCell(currentCell, preserveTransition) {
+	if(!preserveTransition) this.model.transition = 0;
 
 	this.currentCell?.onDeparture(this);
 	this.currentCell = currentCell;
+	this.model.cellIndex = this.currentCell.coordinate.toIndex();
 	this.nextCoord = this.currentCell.onArrival(this);
     }
 
@@ -197,9 +256,9 @@ class Molecule {
     update(deltaT) {
 	let nextCell = this.findNextCell();
 	if(nextCell) {
-	    this.transition += deltaT / this.speed();
+	    this.model.transition += deltaT / this.speed();
 	}
-	if(this.transition >= 1) {
+	if(this.model.transition >= 1) {
 	    this.setCell(nextCell);
 	}
 	this.updateView();
@@ -209,7 +268,7 @@ class Molecule {
 	let text = new Konva.Text({
 	    x: 0,
 	    y: 0,
-	    text: this.formula,
+	    text: this.model.formula,
 	    fontSize: 30,
 	    fontFamily: 'Calibri',
 	    fill: 'orange',
@@ -229,7 +288,7 @@ class Molecule {
 	let nextCell = this.findNextCell();
 	if(nextCell) {
 	    pos = gridToScreen(this.currentCell.coordinate)
-		.interpolate(gridToScreen(nextCell.coordinate), this.transition);
+		.interpolate(gridToScreen(nextCell.coordinate), this.model.transition);
 	} else {
 	    pos = gridToScreen(this.currentCell.coordinate);
 	}
@@ -252,21 +311,31 @@ class World {
     grids = null;
     molecules = new Set();
 
-    constructor(gridLayer, cellLayer, moleculeLayer, cells, grids) {
+    constructor(gridLayer, cellLayer, moleculeLayer, rawWorld) {
 	this.gridLayer = gridLayer;
 	this.cellLayer = cellLayer;
 	this.moleculeLayer = moleculeLayer;
-	this.cells = cells || Array.apply(null, Array(X_COUNT*Y_COUNT)).map(function () {});
-	this.grids = grids || Array.apply(null, Array(X_COUNT*Y_COUNT)).map(function () {});
+	this.cells = Array.apply(null, Array(X_COUNT*Y_COUNT)).map(function () {});
+	this.grids = Array.apply(null, Array(X_COUNT*Y_COUNT)).map(function () {});
+
+	if(rawWorld) {
+	    rawWorld.cells.forEach((c) => {
+		this.initCell(c);
+	    });
+
+	    rawWorld.molecules.forEach((m) => {
+		this.addMolecule(m);
+	    });
+	}
     }
 
-    addMolecule(formula, gridCoord) {
-	let m = new Molecule(this, formula, this.moleculeLayer);
+    addMolecule(moleculeModel) {
+	let m = new Molecule(this, moleculeModel, this.moleculeLayer);
 
-	let c = this.findCell(gridCoord);
+	let c = this.findCell(new GridCoordinate(moleculeModel.cellIndex));
 
 	if(c) {
-	    m.setCell(c);
+	    m.setCell(c, true);
 
 	    this.molecules.add(m);
 	}
@@ -281,7 +350,7 @@ class World {
 	return this.cells[gridCoord.toIndex()];
     }
 
-    loadGrid(gridCoord, isEdge) {
+    initGridCell(gridCoord, isEdge) {
 	let screenCoord = gridToScreen(gridCoord);
 	
 	let hex = new Konva.RegularPolygon({
@@ -313,7 +382,7 @@ class World {
 	if(!isEdge) {
 	    hex.on('click', (e) => {
 		if(e.evt.shiftKey) {
-		    this.addMolecule(calculateElementName(parseInt(Math.random()*1000), true), gridCoord);
+		    this.addMolecule(new MoleculeModel(gridCoord.toIndex(), 0, calculateElementName(parseInt(Math.random()*1000), true)));
 		} else {
 		    this.clickCell(gridCoord);
 		}
@@ -321,21 +390,10 @@ class World {
 
 	    hex.on('rightclick', (e) => {
 	    });
-
-	    
-	    /*hex.clicked = false;
-	      
-	      hex.on('click', (e) => {
-	      hex.clicked = !hex.clicked;
-	      if(hex.clicked) hex.fill('green');
-	      else hex.fill('red');
-	      });*/
 	}
 
-	let gridCell = new Cell('grid', gridCoord, hex, 0);
-	//hex.model = gridCe
+	let gridCell = new Cell(new CellModel(gridCoord.toIndex(), 'grid', 0, null), this.gridLayer, hex);
 	this.gridLayer.add(hex);
-	//this.gridLayer.add(text);
 	this.grids[gridCoord.toIndex()] = gridCell;
 	
 	return hex;
@@ -345,55 +403,28 @@ class World {
     clickCell(gridCoord) {
 	//TODO: add tools besides placing cell
 	if(window.currentSelection.type) {
-	    this.loadCell(gridCoord);
+	    this.initCell(new CellModel(gridCoord.toIndex(), window.currentSelection.type, window.currentSelection.rotation ?? 0, window.currentSelection.img()));
 	}
     }
     
-    loadCell(gridCoord) {
-	let self = this;
-	let c = gridToScreen(gridCoord);
+    initCell(cellModel) {
+	let gridCoord = new GridCoordinate(cellModel.index);
 
-	var imageObj = new Image();
-	imageObj.onload = function() {
-	    let node = new Konva.Image({image: imageObj});
-	//Konva.Image.fromURL(window.currentSelection.img(), function (node) {
-	    let cell = new Cell(window.currentSelection.type, gridCoord, node, window.currentSelection.rotation ?? 0);
+	let cell = new Cell(cellModel, this.cellLayer);
 
-	    node.model = cell;
-            node.setAttrs({
-		x: c.x - POLY_WIDTH/2 - BORDER_BUFFER_X / 2,
-		y: c.y - POLY_HEIGHT/2 - POLY_HEIGHT/Y_COUNT/2-BORDER_BUFFER/2,
-		width: POLY_WIDTH + BORDER_BUFFER_X,
-		height: POLY_HEIGHT + POLY_HEIGHT/Y_COUNT+BORDER_BUFFER,
-		cornerRadius: 0,
-		opacity:0.75
-            });
-
-	    if(window.currentSelection.rotation) {
-		rotateAroundCenter(node, window.currentSelection.rotation);
-	    }
-
-	    node.listening(false);
-
-	    /*
-	    node.on('click', (e) => {
-		let clickCoord = self.gridLayer.getIntersection(stage.getPointerPosition()).model.coordinate;
-		self.clickCell(clickCoord);
-		});
-		*/
-	    
-            self.cellLayer.add(node);
-	    self.cells[gridCoord.toIndex()] = cell;
-	    
-	//});
-	};
-	imageObj.src = window.currentSelection.img();
-
-	let curCell = self.cells[gridCoord.toIndex()];
+	let curCell = this.cells[gridCoord.toIndex()];
 	if(curCell) {
 	    curCell.remove();
 	}
 
+	this.cells[gridCoord.toIndex()] = cell;
+    }
+
+    toJson() {
+	let obj = {};
+	obj.cells = this.cells.filter((m)=>m).map( (c, i) => c.toJsonData());
+	obj.molecules = [...this.molecules.values()].map( (m) => m.toJsonData());
+	return JSON.stringify(obj);
     }
 
     initializeGrid() {
@@ -438,7 +469,7 @@ class World {
 		
 		if(!isInner && !isEdge) continue;
 		
-		this.loadGrid(new GridCoordinate(x, y), isEdge);
+		this.initGridCell(new GridCoordinate(x, y), isEdge);
 	    }
 	}
 	
@@ -530,26 +561,6 @@ function init() {
 	draggable: true,
     });
 
-    let newWorld = false;
-    if(localStorage.world) {
-	console.log("Loading... " + localStorage.world);
-	let rawWorld = JSON.parse(localStorage.world);
-
-	window.baseLayer = Konva.Node.create(rawWorld.gridLayer);
-	window.cellLayer = Konva.Node.create(rawWorld.cellLayer);
-	window.moleculeLayer = new Konva.Layer();
-	
-	window.world = new World(baseLayer, cellLayer, moleculeLayer, rawWorld.cells, rawWorld.grids);
-    } else {
-	
-	window.baseLayer = new Konva.Layer();
-	window.cellLayer = new Konva.Layer();
-	window.moleculeLayer = new Konva.Layer();
-	
-
-	window.world = new World(baseLayer, cellLayer, moleculeLayer, null);
-	newWorld = true;
-    }
 
     window.cursorLayer = new Konva.Layer();
     
@@ -567,6 +578,26 @@ function init() {
     Y_MAX=(stage.height()+(Y_COUNT)*POLY_HEIGHT)/2+0.5*POLY_HEIGHT+2.5;
     
     window.scaleBy = 1.05;
+
+        let newWorld = true;
+    if(localStorage.world) {
+	console.log("Loading... " + localStorage.world);
+	let rawWorld = JSON.parse(localStorage.world);
+
+	window.baseLayer = new Konva.Layer();
+	window.cellLayer = new Konva.Layer();
+	window.moleculeLayer = new Konva.Layer();
+	
+	window.world = new World(baseLayer, cellLayer, moleculeLayer, rawWorld);
+    } else {
+	window.baseLayer = new Konva.Layer();
+	window.cellLayer = new Konva.Layer();
+	window.moleculeLayer = new Konva.Layer();
+	
+
+	window.world = new World(baseLayer, cellLayer, moleculeLayer, null);
+	newWorld = true;
+    }
 
     
     stage.on('wheel', (e) => {
@@ -605,6 +636,7 @@ function init() {
 	if(e.code === 'Escape') {
 	    baseLayer.remove();
 	    cellLayer.remove();
+	    moleculeLayer.remove();
 	    window.baseLayer = new Konva.Layer();
 	    window.cellLayer = new Konva.Layer();
 	    window.moleculeLayer = new Konva.Layer();
@@ -624,7 +656,8 @@ function init() {
 	    e.preventDefault();
 	    return false;
 	} else if(e.code === 'KeyS') {
-//	    localStorage.world = JSON.stringify(world);
+	    localStorage.world = world.toJson();
+	    console.log(localStorage.world);
 	} else if(e.code === 'Tab') {
 	    window.currentSelection.rotation += 60;
 
