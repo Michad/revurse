@@ -736,7 +736,7 @@ function init() {
     world.initializeGrid();
 
 
-    window.currentSelection = {cellType: 'meta1', img: makeImage};
+    window.currentSelection = {tool:"place", cellType: 'meta1', img: makeImage};
 
     stage.position({x:0,y:-POLY_HEIGHT/2});
     //stage.position({x:-X_MIN,y:-Y_MIN});
