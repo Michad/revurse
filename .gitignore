@@ -1,4 +1,5 @@
 
-*.html~
+*.*~
 
-*.js~
+dist/
+node_modules/

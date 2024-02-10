@@ -1,3 +1,7 @@
+import Konva from 'konva';
+import './models/MoleculeModel';
+import './models/CellModel';
+
 const BORDER_BUFFER=2.5;
 const BORDER_BUFFER_X=1;
 
@@ -130,16 +134,6 @@ class GridCoordinate {
     }
 }
 
-class CellModel {
-    constructor(index, type, rotation, img) {
-	this.index = index;
-	this.type = type;
-	this.rotation = rotation;
-	this.img = img;
-    }
-}
-
-
 class Cell {
     model = null;
     layer = null;
@@ -225,13 +219,6 @@ class Cell {
     }
 }
 
-class MoleculeModel {
-    constructor(cellIndex, transition, formula) {
-	this.cellIndex = cellIndex;
-	this.transition = transition;
-	this.formula = formula;
-    }
-}
 
 class Molecule {
     model = null;
