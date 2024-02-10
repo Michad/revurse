@@ -14,7 +14,6 @@ const rotatePoint = ({ x, y }, rad) => {
 };
 
 export function rotateAroundCenter(node : any, rotation : number) {
-return;
   const topLeft = { x: -node.width() / 2, y: -node.height() / 2 };
   const current = rotatePoint(topLeft, Konva.getAngle(node.rotation()));
   const rotated = rotatePoint(topLeft, Konva.getAngle(rotation));
