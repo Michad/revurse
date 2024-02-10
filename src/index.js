@@ -1,9 +1,16 @@
 import Konva from 'konva';
-import './models/MoleculeModel';
-import './models/CellModel';
+import MoleculeModel from './models/MoleculeModel';
+import CellModel from './models/CellModel';
+import Molecule from './modelview/Molecule'
+import {gridToScreen, rotateAroundCenter} from './util/ViewUtil'
+import GridCoordinate from './util/GridCoordinate'
+import ScreenCoordinate from './util/ScreenCoordinate'
+
+
 
 const BORDER_BUFFER=2.5;
 const BORDER_BUFFER_X=1;
+
 
 const ELEMENT_NAME_PARTS = [
     {name: 'alf',  code: 'a'},
@@ -61,78 +68,7 @@ function calculateElementName(num, isSymbol) {
 //    console.log(i + ": " + calculateElementName(i, true) + " - " + calculateElementName(i));
 //}
 
-class ScreenCoordinate {
-    x = 0;
-    y = 0;
 
-    constructor(x, y) {
-	if(x && x.x !== undefined && x.y !== undefined) {
-	    //Copy constructor
-	    this.x = x.x;
-	    this.y = x.y;
-	} else {
-	    this.x = x;
-	    this.y = y;
-	}
-    }
-
-    minus(other) {
-	return new ScreenCoordinate(this.x - other.x, this.y - other.y);
-    }
-
-    scale(factor) {
-	return new ScreenCoordinate(this.x * factor, this.y * factor);
-    }
-
-    interpolate(other, percentage) {
-	return new ScreenCoordinate(
-	    this.x * (1-percentage) + other.x * percentage,
-	    this.y * (1-percentage) + other.y * percentage
-	);
-    }
-}
-
-class GridCoordinate {
-    x = 0;
-    y = 0;
-
-    constructor(x, y) {
-	if(y === undefined) {
-	    this.y = x % Y_COUNT;
-	    this.x = (x-this.y) / Y_COUNT;
-	} else {
-	    this.x = x;
-	    this.y = y;
-	}
-    }
-
-    toIndex() {
-	return this.x * Y_COUNT + this.y;
-    }
-
-    findNeighbor(rot) {
-	rot = rot % 360;
-	if(rot >= 330 || rot < 30) {
-	    if(this.y > 1)
-		return new GridCoordinate(this.x, this.y-1);
-	} else if(rot < 90) {
-	    if(this.x < X_COUNT && this.y > 0)
-		return new GridCoordinate(this.x+1, this.y + (this.x%2 ? 0 : -1) );
-	} else if (rot < 150) {
-	    if(this.x < X_COUNT)
-		return new GridCoordinate(this.x+1,this.y + (this.x%2 ? 1 : 0) );
-	} else if (rot < 210) {
-	    if(this.y < Y_COUNT)
-		return new GridCoordinate(this.x, this.y+1);
-	} else if (rot < 270) {
-	    if(this.x > 0 && this.x > 0)
-		return new GridCoordinate(this.x-1,this.y + (this.x%2 ? 1 : 0) );
-	} else if (rot < 330) {
-	    if(this.x > 0 && this.y > 0)
-		return new GridCoordinate(this.x-1, this.y + (this.x%2 ? 0 : -1) );
-	}
-    }
-}
 
 class Cell {
     model = null;
@@ -220,90 +156,6 @@ class Cell {
 }
 
 
-class Molecule {
-    model = null;
-    world = null;
-    currentCell = null;
-    nextCoord = null;
-    view = null;
-
-    constructor(world, moleculeModel, layer) {
-	this.world = world;
-	this.model = moleculeModel;
-	this.view = this.draw(layer);
-    }
-
-    toJsonData() {
-	return this.model;
-    }
-
-    speed() {
-	return 1.0;
-    }
-
-    setCell(currentCell, preserveTransition) {
-	if(!preserveTransition) this.model.transition = 0;
-
-	this.currentCell?.onDeparture(this);
-	this.currentCell = currentCell;
-	this.model.cellIndex = this.currentCell.coordinate.toIndex();
-	this.nextCoord = this.currentCell.onArrival(this);
-    }
-
-    findNextCell() {
-	return this.nextCoord ? this.world.findCell(this.nextCoord) : null
-    }
-
-    update(deltaT) {
-	let nextCell = this.findNextCell();
-	if(nextCell) {
-	    this.model.transition += deltaT / this.speed();
-	}
-	if(this.model.transition >= 1) {
-	    this.setCell(nextCell);
-	}
-	this.updateView();
-    }
-
-    draw(layer) {
-	let text = new Konva.Text({
-	    x: 0,
-	    y: 0,
-	    text: this.model.formula,
-	    fontSize: 30,
-	    fontFamily: 'Calibri',
-	    fill: 'orange',
-	    align: 'center'
-	});
-
-	text.listening(false);
-	text.offsetX(text.width() / 2);
-	text.offsetY(text.height() / 2);
-
-	layer.add(text);
-
-	return text;
-    }
-
-    updateView() {
-	let pos = null;
-	let nextCell = this.findNextCell();
-	if(nextCell) {
-	    pos = gridToScreen(this.currentCell.coordinate)
-		.interpolate(gridToScreen(nextCell.coordinate), this.model.transition);
-	} else {
-	    pos = gridToScreen(this.currentCell.coordinate);
-	}
-
-	//console.log(JSON.stringify(pos));
-	this.view.position(pos);
-    }
-
-    remove() {
-	this.view?.remove();
-	this.world.molecules.delete(this);
-    }
-}
 
 class World {
     gridLayer = null;
@@ -486,27 +338,6 @@ class World {
     }
 }
 
-function gridToScreen(gridCoord) {
-    return new ScreenCoordinate( (gridCoord.x) * POLY_ROW_WIDTH + X_MIN +POLY_WIDTH/2,  (gridCoord.y+ (gridCoord.x%2)/2) * POLY_HEIGHT + Y_MIN);
-}
-
-//From https://konvajs.org/docs/posts/Position_vs_Offset.html
-const rotatePoint = ({ x, y }, rad) => {
-  const rcos = Math.cos(rad);
-  const rsin = Math.sin(rad);
-  return { x: x * rcos - y * rsin, y: y * rcos + x * rsin };
-};
-function rotateAroundCenter(node, rotation) {
-  const topLeft = { x: -node.width() / 2, y: -node.height() / 2 };
-  const current = rotatePoint(topLeft, Konva.getAngle(node.rotation()));
-  const rotated = rotatePoint(topLeft, Konva.getAngle(rotation));
-  const dx = rotated.x - current.x,
-    dy = rotated.y - current.y;
-
-  node.rotation(rotation);
-  node.x(node.x() + dx);
-  node.y(node.y() + dy);
-}
 
 function makeImage() {
     let revertPos = stage.position();

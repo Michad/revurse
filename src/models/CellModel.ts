@@ -11,3 +11,5 @@ class CellModel {
 	this.img = img;
     }
 }
+
+export default CellModel;

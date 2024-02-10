@@ -4,7 +4,8 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 const config = {
     entry: './src/index.js',
-    devtool: 'eval-source-map',
+    devtool: 'source-map',
+    
     devServer: {
 	port: 3000,
 	hot: true,
@@ -22,8 +23,9 @@ const config = {
     },
     plugins: [
       new CopyPlugin({
-	patterns: [{ from: 'src/index.html' }],
-	patterns: [{ from: 'src/images' }],
+	  patterns: [{ from: 'src/index.html' }],
+	  patterns: [{ from: 'src/images' }],
+	  patterns: [{ from: 'src/index.html' }], //For some reason this needs to be in here twice or it gets ignored
       })
     ],
     module: {
