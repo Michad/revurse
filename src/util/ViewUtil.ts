@@ -1,10 +1,5 @@
-import ScreenCoordinate from './ScreenCoordinate'
-import GridCoordinate from './GridCoordinate'
 import Konva from 'konva'
 
-export function gridToScreen(gridCoord: GridCoordinate) {
-  return new ScreenCoordinate((gridCoord.x) * (<any>window).POLY_ROW_WIDTH + (<any>window).X_MIN + (<any>window).POLY_WIDTH / 2, (gridCoord.y + (gridCoord.x % 2) / 2) * (<any>window).POLY_HEIGHT + (<any>window).Y_MIN);
-}
 
 //From https://konvajs.org/docs/posts/Position_vs_Offset.html
 const rotatePoint = ({ x, y }, rad) => {

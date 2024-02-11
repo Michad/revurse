@@ -1,4 +1,6 @@
-class CellModel {
+import BaseModel from "./BaseModel";
+
+class CellModel implements BaseModel {
     index: number
     type: string
     rotation: number

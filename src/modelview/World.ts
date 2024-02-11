@@ -2,26 +2,31 @@ import Konva from "konva";
 import GridCoordinate from "../util/GridCoordinate";
 import Cell from "./Cell";
 import Molecule from "./Molecule";
-import { gridToScreen } from "../util/ViewUtil";
 import CellModel from "../models/CellModel";
 import MoleculeModel from "../models/MoleculeModel";
+import WorldModel from "../models/WorldModel";
 import { calculateElementName } from "../util/ChemistryUtil";
 import { X_COUNT, Y_COUNT } from "../util/Constants";
+import Base from "./Base";
+import Universe from "./Universe";
 
-class World {
+class World implements Base<WorldModel> {
+    stage: Konva.Stage;
     gridLayer: Konva.Layer;
     cellLayer: Konva.Layer;
     moleculeLayer: Konva.Layer;
     cells: Array<Cell | null>;
     grids: Array<Cell | null>;
     molecules: Set<Molecule> = new Set();
+    universe: Universe;
 
-    constructor(gridLayer, cellLayer, moleculeLayer, rawWorld) {
-        this.gridLayer = gridLayer;
-        this.cellLayer = cellLayer;
-        this.moleculeLayer = moleculeLayer;
+    constructor(stage: Konva.Stage, universe: Universe, rawWorld: WorldModel | null) {
+        this.universe = universe;
+        this.stage = stage;
         this.cells = Array.apply(null, Array(X_COUNT * Y_COUNT)).map(function () { });
         this.grids = Array.apply(null, Array(X_COUNT * Y_COUNT)).map(function () { });
+
+        this.draw();
 
         if (rawWorld) {
             rawWorld.cells.forEach((c) => {
@@ -32,15 +37,14 @@ class World {
                 this.addMolecule(m);
             });
         }
+
     }
 
-    addMolecule(moleculeModel) {
-        let m = new Molecule(this, moleculeModel, this.moleculeLayer);
-
+    addMolecule(moleculeModel: MoleculeModel) {
         let c = this.findCell(new GridCoordinate(moleculeModel.cellIndex));
 
         if (c) {
-            m.setCell(c, true);
+            let m = new Molecule(this, moleculeModel, this.moleculeLayer, c);
 
             this.molecules.add(m);
         }
@@ -51,18 +55,19 @@ class World {
         this.molecules.forEach((m) => m && m.update(deltaT));
     }
 
-    findCell(gridCoord) {
+    findCell(gridCoord: GridCoordinate) {
         return this.cells[gridCoord.toIndex()];
     }
 
-    initGridCell(gridCoord, isEdge) {
-        let screenCoord = gridToScreen(gridCoord);
+    initGridCell(gridCoord: GridCoordinate, isEdge: boolean) {
+        let screenCoord = this.universe.gridToScreen(gridCoord);
+        let screenCalc = this.universe.getScreenCalculations();
 
         let hex = new Konva.RegularPolygon({
             x: screenCoord.x,
             y: screenCoord.y,
             sides: 6,
-            radius: (<any>window).POLY_WIDTH / 2,
+            radius: screenCalc.polyWidth / 2,
             fill: isEdge ? 'yellow' : 'green',
             stroke: 'black',
             strokeWidth: 4,
@@ -93,7 +98,7 @@ class World {
             });
         }
 
-        let gridCell = new Cell(new CellModel(gridCoord.toIndex(), 'grid', 0, null), this.gridLayer, hex);
+        let gridCell = new Cell(this.universe, new CellModel(gridCoord.toIndex(), 'grid', 0, null), this.gridLayer, hex);
         this.gridLayer.add(hex);
         this.grids[gridCoord.toIndex()] = gridCell;
 
@@ -101,7 +106,7 @@ class World {
     }
 
 
-    clickCell(gridCoord) {
+    clickCell(gridCoord: GridCoordinate) {
         switch ((<any>window).currentSelection.tool) {
             case "place":
                 this.initCell(new CellModel(gridCoord.toIndex(), (<any>window).currentSelection.cellType, (<any>window).currentSelection.rotation ?? 0, (<any>window).currentSelection.img()));
@@ -115,13 +120,33 @@ class World {
         }
     }
 
-    initCell(cellModel) {
+    initCell(cellModel: CellModel) {
         let gridCoord = new GridCoordinate(cellModel.index);
 
-        let cell = new Cell(cellModel, this.cellLayer);
+        let cell = new Cell(this.universe, cellModel, this.cellLayer);
 
         this.removeCell(gridCoord);
         this.cells[gridCoord.toIndex()] = cell;
+    }
+
+    draw() {
+        this.gridLayer = new Konva.Layer();
+        this.cellLayer = new Konva.Layer();
+        this.moleculeLayer = new Konva.Layer();
+
+        this.stage.add(this.gridLayer);
+        this.stage.add(this.cellLayer);
+        this.stage.add(this.moleculeLayer);
+
+        this.gridLayer.zIndex(0);
+        this.cellLayer.zIndex(1);
+        this.moleculeLayer.zIndex(2);
+    }
+
+    remove() {
+        this.gridLayer.remove();
+        this.cellLayer.remove();
+        this.moleculeLayer.remove();
     }
 
     removeCell(gridCoord) {
@@ -133,11 +158,11 @@ class World {
         this.cells[gridCoord.toIndex()] = null;
     }
 
-    toJson(): String {
-        let obj: any = {};
-        obj.cells = this.cells.filter((m) => m).map((c, i) => c?.toJsonData());
-        obj.molecules = [...this.molecules.values()].map((m) => m.toJsonData());
-        return JSON.stringify(obj);
+    toJsonData(): WorldModel {
+        return new WorldModel(
+            this.cells.filter((m) => m).map((c, i) => c!.toJsonData()),
+            [...this.molecules.values()].map((m) => m.toJsonData())
+        );
     }
 
     initializeGrid() {

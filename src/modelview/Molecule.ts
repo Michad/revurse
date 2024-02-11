@@ -1,20 +1,26 @@
 import Konva from 'konva';
 import MoleculeModel from '../models/MoleculeModel'
-import { gridToScreen } from '../util/ViewUtil'
 import ScreenCoordinate from '../util/ScreenCoordinate'
 import Cell from './Cell';
+import World from './World';
+import GridCoordinate from 'util/GridCoordinate';
+import Base from './Base';
 
-class Molecule {
+class Molecule implements Base<MoleculeModel> {
 	model: MoleculeModel
-	world: any
-	currentCell: any
-	nextCoord: any
-	view: any
+	world: World
+	currentCell: Cell
+	nextCoord: GridCoordinate | null
+	view: Konva.Node
+	layer: Konva.Layer
 
-	constructor(world, moleculeModel, layer) {
+	constructor(world : World, moleculeModel : MoleculeModel, layer : Konva.Layer, cell : Cell) {
 		this.world = world;
 		this.model = moleculeModel;
-		this.view = this.draw(layer);
+		this.layer = layer;
+		this.view = this.draw();
+
+		this.setCell(cell, true);
 	}
 
 	toJsonData() {
@@ -42,14 +48,15 @@ class Molecule {
 		let nextCell = this.findNextCell();
 		if (nextCell) {
 			this.model.transition += deltaT / this.speed();
-		}
-		if (this.model.transition >= 1) {
-			this.setCell(nextCell);
+
+			if (this.model.transition >= 1) {
+				this.setCell(nextCell!);
+			}
 		}
 		this.updateView();
 	}
 
-	draw(layer) {
+	draw() {
 		let text = new Konva.Text({
 			x: 0,
 			y: 0,
@@ -64,7 +71,7 @@ class Molecule {
 		text.offsetX(text.width() / 2);
 		text.offsetY(text.height() / 2);
 
-		layer.add(text);
+		this.layer.add(text);
 
 		return text;
 	}
@@ -73,10 +80,10 @@ class Molecule {
 		let pos: ScreenCoordinate;
 		let nextCell = this.findNextCell();
 		if (nextCell) {
-			pos = gridToScreen(this.currentCell.coordinate)
-				.interpolate(gridToScreen(nextCell.coordinate), this.model.transition);
+			pos = this.world.universe.gridToScreen(this.currentCell.coordinate)
+				.interpolate(this.world.universe.gridToScreen(nextCell.coordinate), this.model.transition);
 		} else {
-			pos = gridToScreen(this.currentCell.coordinate);
+			pos = this.world.universe.gridToScreen(this.currentCell.coordinate);
 		}
 
 		//console.log(JSON.stringify(pos));

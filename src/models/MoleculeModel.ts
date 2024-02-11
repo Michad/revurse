@@ -1,4 +1,6 @@
-class MoleculeModel {
+import BaseModel from "./BaseModel";
+
+class MoleculeModel implements BaseModel {
     cellIndex: number
     transition: number
     formula: string

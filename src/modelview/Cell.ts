@@ -2,17 +2,21 @@ import Konva from "konva";
 import CellModel from "../models/CellModel";
 import GridCoordinate from "../util/GridCoordinate";
 import Molecule from "./Molecule";
-import { gridToScreen, rotateAroundCenter } from "../util/ViewUtil";
+import Base from "./Base";
+import { rotateAroundCenter } from "../util/ViewUtil";
 import { BORDER_BUFFER, BORDER_BUFFER_X, Y_COUNT } from "../util/Constants";
+import Universe from "./Universe";
 
-class Cell {
+class Cell implements Base<CellModel> {
     model: CellModel
     layer: Konva.Layer
     view: Konva.Node
     coordinate: GridCoordinate
     molecules: Set<Molecule>
+    universe: Universe
 
-    constructor(model: CellModel, layer: Konva.Layer, overrideView: Konva.Node | null = null) {
+    constructor(universe: Universe, model: CellModel, layer: Konva.Layer, overrideView: Konva.Node | null = null) {
+        this.universe = universe;
         this.model = model;
         this.coordinate = new GridCoordinate(model.index);
         this.layer = layer;
@@ -39,17 +43,18 @@ class Cell {
         if (!self?.model?.img) return;
 
         var imageObj = new Image();
-        let screnCoord = gridToScreen(self.coordinate);
+        let screnCoord = this.universe.gridToScreen(self.coordinate);
+        let screenCalc = this.universe.getScreenCalculations();
 
         imageObj.onload = function () {
             let node = new Konva.Image({ image: imageObj });
             self.view = node;
 
             node.setAttrs({
-                x: screnCoord.x - (<any>window).POLY_WIDTH / 2 - BORDER_BUFFER_X / 2,
-                y: screnCoord.y - (<any>window).POLY_HEIGHT / 2 - (<any>window).POLY_HEIGHT / Y_COUNT / 2 - BORDER_BUFFER / 2,
-                width: (<any>window).POLY_WIDTH + BORDER_BUFFER_X,
-                height: (<any>window).POLY_HEIGHT + (<any>window).POLY_HEIGHT / Y_COUNT + BORDER_BUFFER,
+                x: screnCoord.x - screenCalc.polyWidth / 2 - BORDER_BUFFER_X / 2,
+                y: screnCoord.y - screenCalc.polyHeight / 2 - screenCalc.polyHeight / Y_COUNT / 2 - BORDER_BUFFER / 2,
+                width: screenCalc.polyWidth + BORDER_BUFFER_X,
+                height: screenCalc.polyHeight + screenCalc.polyHeight / Y_COUNT + BORDER_BUFFER,
                 cornerRadius: 0,
                 opacity: 0.75
             });
