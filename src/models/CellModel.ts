@@ -2,9 +2,9 @@ class CellModel {
     index: number
     type: string
     rotation: number
-    img: string
+    img: string | null
 
-    constructor(index: number, type: string, rotation: number, img: string) {
+    constructor(index: number, type: string, rotation: number, img: string | null) {
         this.index = index;
         this.type = type;
         this.rotation = rotation;

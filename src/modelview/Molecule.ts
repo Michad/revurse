@@ -2,6 +2,7 @@ import Konva from 'konva';
 import MoleculeModel from '../models/MoleculeModel'
 import { gridToScreen } from '../util/ViewUtil'
 import ScreenCoordinate from '../util/ScreenCoordinate'
+import Cell from './Cell';
 
 class Molecule {
 	model: MoleculeModel
@@ -24,7 +25,7 @@ class Molecule {
 		return 1.0;
 	}
 
-	setCell(currentCell, preserveTransition = null) {
+	setCell(currentCell : Cell, preserveTransition : boolean = false) {
 		if (!preserveTransition) this.model.transition = 0;
 
 		this.currentCell?.onDeparture(this);
