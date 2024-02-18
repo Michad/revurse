@@ -7,11 +7,15 @@ import Universe from './modelview/Universe';
 
 
 function makeImage() {
+	let stage = window.universe.stage;
+
 	let revertPos = stage.position();
 	let revertSize = stage.size();
 	let revertScale = stage.scale();
-	stage.position(new ScreenCoordinate(-X_MIN, -Y_MIN));
-	stage.size({ width: X_MAX - X_MIN, height: Y_MAX - Y_MIN });
+	let screenCalcs = window.universe.getScreenCalculations();
+
+	stage.position(new ScreenCoordinate(-screenCalcs.xMin, -screenCalcs.yMin));
+	stage.size({ width: screenCalcs.xMax - screenCalcs.xMin, height: screenCalcs.yMax - screenCalcs.yMin });
 	stage.scale({ x: 1, y: 1 });
 	//stage.size(X_MAX, Y_MAX);
 	console.log(stage.position());
@@ -99,11 +103,9 @@ function init() {
 
 	document.addEventListener('keydown', function (e) {
 		if (e.code === 'Escape') {
-			world.remove();
-			world = new World(stage, null);
-			world.initializeGrid();
+			delete localStorage.universe;
 
-			cursorLayer.zIndex(3);
+			window.location = window.location;
 
 			e.preventDefault();
 			return false;
@@ -161,7 +163,7 @@ function init() {
 	window.universe.activeWorld.initializeGrid();
 
 
-	window.currentSelection = { tool: "place", cellType: 'meta1', img: makeImage };
+	window.currentSelection = { tool: "place", cellType: 'meta', img: makeImage };
 
 	stage.position({ x: 0, y: - screenCalcs.polyHeight / 2 });
 

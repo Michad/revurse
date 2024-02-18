@@ -1,20 +1,19 @@
 import Konva from "konva";
 import GridCoordinate from "../util/GridCoordinate";
-import Cell from "./Cell";
+import { Cell } from "./Cell";
 import Molecule from "./Molecule";
 import CellModel from "../models/CellModel";
 import MoleculeModel from "../models/MoleculeModel";
 import WorldModel from "../models/WorldModel";
 import { calculateElementName } from "../util/ChemistryUtil";
 import { X_COUNT, Y_COUNT } from "../util/Constants";
+import { CellType, LayerType } from "../constants/Enums";
 import Base from "./Base";
 import Universe from "./Universe";
 
 class World implements Base<WorldModel> {
     stage: Konva.Stage;
-    gridLayer: Konva.Layer;
-    cellLayer: Konva.Layer;
-    moleculeLayer: Konva.Layer;
+    layers : Map<LayerType, Konva.Layer>;
     cells: Array<Cell | null>;
     grids: Array<Cell | null>;
     molecules: Set<Molecule> = new Set();
@@ -25,6 +24,7 @@ class World implements Base<WorldModel> {
         this.stage = stage;
         this.cells = Array.apply(null, Array(X_COUNT * Y_COUNT)).map(function () { });
         this.grids = Array.apply(null, Array(X_COUNT * Y_COUNT)).map(function () { });
+        this.layers = new Map();
 
         this.draw();
 
@@ -44,7 +44,7 @@ class World implements Base<WorldModel> {
         let c = this.findCell(new GridCoordinate(moleculeModel.cellIndex));
 
         if (c) {
-            let m = new Molecule(this, moleculeModel, this.moleculeLayer, c);
+            let m = new Molecule(this, moleculeModel, this.layers[LayerType.MOLECULE], c);
 
             this.molecules.add(m);
         }
@@ -59,57 +59,17 @@ class World implements Base<WorldModel> {
         return this.cells[gridCoord.toIndex()];
     }
 
-    initGridCell(gridCoord: GridCoordinate, isEdge: boolean) {
-        let screenCoord = this.universe.gridToScreen(gridCoord);
-        let screenCalc = this.universe.getScreenCalculations();
-
-        let hex = new Konva.RegularPolygon({
-            x: screenCoord.x,
-            y: screenCoord.y,
-            sides: 6,
-            radius: screenCalc.polyWidth / 2,
-            fill: isEdge ? 'yellow' : 'green',
-            stroke: 'black',
-            strokeWidth: 4,
-            /*	    shadowOffsetX : 20,
-                shadowOffsetY : 25,
-                shadowBlur : 40,
-                opacity : 0.5,*/
-            rotation: 30
-        });
-
-        let text = new Konva.Text({
-            x: screenCoord.x - 30,
-            y: screenCoord.y - 30,
-            text: "{" + gridCoord.x + "," + gridCoord.y + "}",
-            fontSize: 30,
-            fontFamily: 'Calibri',
-            fill: 'black',
-            align: 'center'
-        });
-
-
-        if (!isEdge) {
-            hex.on('click', (e) => {
-                this.clickCell(gridCoord);
-            });
-
-            hex.on('rightclick', (e) => {
-            });
-        }
-
-        let gridCell = new Cell(this.universe, new CellModel(gridCoord.toIndex(), 'grid', 0, null), this.gridLayer, hex);
-        this.gridLayer.add(hex);
+    initGridCell(gridCoord: GridCoordinate) {
+        let gridCell = Cell.new(this, CellModel.new(gridCoord.toIndex(), CellType.GRID, 0), this.layers[LayerType.GRID]);
+        
         this.grids[gridCoord.toIndex()] = gridCell;
-
-        return hex;
     }
 
 
     clickCell(gridCoord: GridCoordinate) {
         switch ((<any>window).currentSelection.tool) {
             case "place":
-                this.initCell(new CellModel(gridCoord.toIndex(), (<any>window).currentSelection.cellType, (<any>window).currentSelection.rotation ?? 0, (<any>window).currentSelection.img()));
+                this.initCell(CellModel.new(gridCoord.toIndex(), (<any>window).currentSelection.cellType, (<any>window).currentSelection.rotation ?? 0, (<any>window).currentSelection.img()));
                 break;
             case "molecule":
                 this.addMolecule(new MoleculeModel(gridCoord.toIndex(), 0, calculateElementName(Math.floor(Math.random() * 1000), true)));
@@ -123,30 +83,37 @@ class World implements Base<WorldModel> {
     initCell(cellModel: CellModel) {
         let gridCoord = new GridCoordinate(cellModel.index);
 
-        let cell = new Cell(this.universe, cellModel, this.cellLayer);
+        let cell = Cell.new(this, cellModel, this.layers[LayerType.CELL]);
 
         this.removeCell(gridCoord);
         this.cells[gridCoord.toIndex()] = cell;
     }
 
+    getLayer(layerId : LayerType) : Konva.Layer {
+        return this.layers[layerId];
+    }
+
     draw() {
-        this.gridLayer = new Konva.Layer();
-        this.cellLayer = new Konva.Layer();
-        this.moleculeLayer = new Konva.Layer();
+        this.layers[LayerType.GRID] = new Konva.Layer();
+        this.layers[LayerType.CELL] = new Konva.Layer();
+        this.layers[LayerType.MOLECULE] = new Konva.Layer();
 
-        this.stage.add(this.gridLayer);
-        this.stage.add(this.cellLayer);
-        this.stage.add(this.moleculeLayer);
+        this.stage.add(this.layers[LayerType.GRID]);
+        this.stage.add(this.layers[LayerType.CELL]);
+        this.stage.add(this.layers[LayerType.MOLECULE]);
 
-        this.gridLayer.zIndex(0);
-        this.cellLayer.zIndex(1);
-        this.moleculeLayer.zIndex(2);
+        this.layers.forEach((v, k) => v.zIndex(k));
     }
 
     remove() {
-        this.gridLayer.remove();
-        this.cellLayer.remove();
-        this.moleculeLayer.remove();
+        this.layers[LayerType.GRID].remove();
+        this.layers[LayerType.CELL].remove();
+        this.layers[LayerType.MOLECULE].remove();
+    }
+
+    removeMolecule(molecule) {
+        this.molecules.delete(molecule);
+        molecule.remove();
     }
 
     removeCell(gridCoord) {
@@ -172,42 +139,9 @@ class World implements Base<WorldModel> {
 
         for (let x = 0; x < X_COUNT; x++) {
             for (let y = 0; y < Y_COUNT; y++) {
-                let isInner = true;
-                let isEdge = false;
+                let c = new GridCoordinate(x, y);
 
-                if (y == 0 || y == 7) {
-                    if (x == 3 || x == 5) {
-                        isEdge = true;
-                        isInner = false;
-                    } else if (y == 0) {
-                        isInner = false;
-                    } else if (y == 7) {
-                        if (x > 1 && x < 7) {
-                            isInner = true;
-                        } else {
-                            isInner = false;
-                        }
-                    }
-                } else if (x == 0 || x == 8) {
-                    if (y == 4) {
-                        isInner = true;
-                    } else if (y == 3 || y == 5) {
-                        isEdge = true;
-                        isInner = false;
-                    } else {
-                        isInner = false;
-                    }
-                } else if (x == 1 || x == 7) {
-                    if (y <= 1 || y >= 6) {
-                        isInner = false;
-                    } if (y == 1 || y == 6) {
-                        isEdge = true;
-                    }
-                }
-
-                if (!isInner && !isEdge) continue;
-
-                this.initGridCell(new GridCoordinate(x, y), isEdge);
+                if(c.isInner() || c.isEdge()) this.initGridCell(c);
             }
         }
 

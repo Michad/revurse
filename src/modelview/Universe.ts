@@ -32,6 +32,8 @@ export default class Universe implements Base<UniverseModel> {
         }
     }
 
+    
+
 
     toJsonData(): UniverseModel {
         return new UniverseModel(this.activeWorldName, { ...this.savedWorldModels, [this.activeWorldName]: this.activeWorld.toJsonData() });

@@ -50,3 +50,7 @@ export function calculateElementName(num, isSymbol) {
 
     return name.charAt(0).toUpperCase() + name.substring(1);
 }
+
+export function mergeElements(formula1: string, formula2: string) {
+    return formula1 + formula2;
+}

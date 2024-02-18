@@ -1,7 +1,7 @@
 import Konva from 'konva';
 import MoleculeModel from '../models/MoleculeModel'
 import ScreenCoordinate from '../util/ScreenCoordinate'
-import Cell from './Cell';
+import { Cell } from './Cell';
 import World from './World';
 import GridCoordinate from 'util/GridCoordinate';
 import Base from './Base';
@@ -31,17 +31,27 @@ class Molecule implements Base<MoleculeModel> {
 		return 1.0;
 	}
 
-	setCell(currentCell : Cell, preserveTransition : boolean = false) {
+	setFormula(newFormula : string) : void {
+		this.model.formula = newFormula;
+		this.view.remove();
+		this.view = this.draw();
+	}
+
+	setCell(newCell : Cell, preserveTransition : boolean = false) {
 		if (!preserveTransition) this.model.transition = 0;
 
+		let lastCell = this.currentCell;
 		this.currentCell?.onDeparture(this);
-		this.currentCell = currentCell;
+		this.currentCell = newCell;
 		this.model.cellIndex = this.currentCell.coordinate.toIndex();
-		this.nextCoord = this.currentCell.onArrival(this);
+		this.nextCoord = this.currentCell.onArrival(this, lastCell);
 	}
 
 	findNextCell() {
-		return this.nextCoord ? this.world.findCell(this.nextCoord) : null
+		let candidate = this.nextCoord ? this.world.findCell(this.nextCoord) : null
+		if(candidate?.canAccept(this.currentCell)) return candidate;
+		
+		return null;
 	}
 
 	update(deltaT) {
@@ -52,6 +62,8 @@ class Molecule implements Base<MoleculeModel> {
 			if (this.model.transition >= 1) {
 				this.setCell(nextCell!);
 			}
+		} else {
+			this.model.transition = 0;
 		}
 		this.updateView();
 	}
