@@ -8,7 +8,8 @@ export enum LayerType {
 export enum CellType {
     GRID = "grid",
     STRAIGHT = "straight",
-    SLIGHT_TURN = 'slight_turn',
+    SLIGHT_LEFT = 'slight_left',
+    SLIGHT_RIGHT = 'slight_right',
     JOIN = 'join',
     META = 'meta'
 }

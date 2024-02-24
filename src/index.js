@@ -1,8 +1,8 @@
 import Konva from 'konva';
 import World from './modelview/World';
-import { rotateAroundCenter } from './util/ViewUtil';
-import ScreenCoordinate from './util/ScreenCoordinate';
-import { BORDER_BUFFER, BORDER_BUFFER_X, X_COUNT, Y_COUNT } from './util/Constants';
+import { rotateAroundCenter } from './view/util/ViewManipulation';
+import ScreenCoordinate from './view/util/ScreenCoordinate';
+import { BORDER_BUFFER, BORDER_BUFFER_X, X_COUNT, Y_COUNT } from './constants/Constants';
 import Universe from './modelview/Universe';
 
 

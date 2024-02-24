@@ -2,7 +2,7 @@ import { enumLookup, CellType } from "../constants/Enums";
 import BaseModel from "./BaseModel";
 
 class CellModel implements BaseModel {
-    index: number
+    index: GridIndex
     type: CellType
     rotation: number
     img: string | null
@@ -11,7 +11,7 @@ class CellModel implements BaseModel {
 
     }
 
-    static new(index: number, typeStr: string, rotation: number, img?: string) {
+    static new(index: GridIndex, typeStr: string, rotation: number, img?: string) {
         let type : CellType | null = enumLookup(CellType, typeStr);
         if(type === null) throw "Invalid type " + typeStr;
 
@@ -31,6 +31,10 @@ class CellModel implements BaseModel {
 
         return cell;
     }
+}
+
+class JoinCellModel extends CellModel {
+
 }
 
 export default CellModel;

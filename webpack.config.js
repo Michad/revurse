@@ -23,10 +23,7 @@ const config = {
 	},
 	plugins: [
 		new CopyPlugin({
-			patterns: [{ from: 'src/index.html' }],
-			patterns: [{ from: 'src/images' }],
-			patterns: [{ from: 'src/index.html' }], //For some reason this needs to be in here twice or it gets ignored
-			patterns: [{ from: 'src/images' }],
+			patterns: [{ from: 'src/index.html' }, { from: 'src/images' }],
 		})
 	],
 	module: {
@@ -35,7 +32,14 @@ const config = {
 				test: /\.ts(x)?$/,
 				loader: 'ts-loader',
 				exclude: [/node_modules/, /\.test\.ts(x)?$/]
-			}
+			},
+			{
+                test: /\.(png|jpg|gif)$/,
+                use: [{
+                    loader: 'file-loader',
+                    options: {}
+                }]
+            }
 		]
 	},
 	resolve: {

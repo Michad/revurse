@@ -3,10 +3,10 @@ import UniverseModel from "../models/UniverseModel";
 import Base from "./Base";
 import World from "./World";
 import Konva from "konva";
-import { X_COUNT, Y_COUNT } from "../util/Constants";
-import ScreenCalculations from "../util/ScreenCalculations";
-import GridCoordinate from "../util/GridCoordinate";
-import ScreenCoordinate from "../util/ScreenCoordinate";
+import { X_COUNT, Y_COUNT } from "../constants/Constants";
+import ScreenCalculations from "../view/util/ScreenCalculations";
+import GridCoordinate from "./util/GridCoordinate";
+import ScreenCoordinate from "../view/util/ScreenCoordinate";
 
 export default class Universe implements Base<UniverseModel> {
     activeWorld: World
@@ -32,7 +32,7 @@ export default class Universe implements Base<UniverseModel> {
         }
     }
 
-    
+
 
 
     toJsonData(): UniverseModel {

@@ -1,12 +1,12 @@
 import Konva from "konva";
-import GridCoordinate from "../util/GridCoordinate";
+import GridCoordinate from "./util/GridCoordinate";
 import { Cell } from "./Cell";
 import Molecule from "./Molecule";
 import CellModel from "../models/CellModel";
 import MoleculeModel from "../models/MoleculeModel";
 import WorldModel from "../models/WorldModel";
 import { calculateElementName } from "../util/ChemistryUtil";
-import { X_COUNT, Y_COUNT } from "../util/Constants";
+import { X_COUNT, Y_COUNT } from "../constants/Constants";
 import { CellType, LayerType } from "../constants/Enums";
 import Base from "./Base";
 import Universe from "./Universe";
@@ -34,18 +34,18 @@ class World implements Base<WorldModel> {
             });
 
             rawWorld.molecules.forEach((m) => {
-                this.addMolecule(m);
+                this.addMolecule(m, true);
             });
         }
 
     }
 
-    addMolecule(moleculeModel: MoleculeModel) {
+    addMolecule(moleculeModel: MoleculeModel, force: boolean = false) {
         let c = this.findCell(new GridCoordinate(moleculeModel.cellIndex));
 
-        if (c) {
+        if (c && (force || c.canAccept(null))) {
             let m = new Molecule(this, moleculeModel, this.layers[LayerType.MOLECULE], c);
-
+            
             this.molecules.add(m);
         }
     }
@@ -69,10 +69,11 @@ class World implements Base<WorldModel> {
     clickCell(gridCoord: GridCoordinate) {
         switch ((<any>window).currentSelection.tool) {
             case "place":
+                this.removeCell(gridCoord);
                 this.initCell(CellModel.new(gridCoord.toIndex(), (<any>window).currentSelection.cellType, (<any>window).currentSelection.rotation ?? 0, (<any>window).currentSelection.img()));
                 break;
             case "molecule":
-                this.addMolecule(new MoleculeModel(gridCoord.toIndex(), 0, calculateElementName(Math.floor(Math.random() * 1000), true)));
+                this.addMolecule(new MoleculeModel(gridCoord.toIndex(), 0, 0, calculateElementName(Math.floor(Math.random() * 1000), true)));
                 break;
             case "erase":
                 this.removeCell(gridCoord);
@@ -85,7 +86,6 @@ class World implements Base<WorldModel> {
 
         let cell = Cell.new(this, cellModel, this.layers[LayerType.CELL]);
 
-        this.removeCell(gridCoord);
         this.cells[gridCoord.toIndex()] = cell;
     }
 
@@ -121,6 +121,7 @@ class World implements Base<WorldModel> {
         if (curCell) {
             curCell.remove();
         }
+        this.molecules.forEach(m => m.currentCell == curCell && this.removeMolecule(m));
 
         this.cells[gridCoord.toIndex()] = null;
     }

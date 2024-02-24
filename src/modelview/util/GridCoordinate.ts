@@ -1,4 +1,4 @@
-import { X_COUNT, Y_COUNT } from "./Constants";
+import { X_COUNT, Y_COUNT } from "../../constants/Constants";
 
 class GridCoordinate {
 	x: number
@@ -18,7 +18,7 @@ class GridCoordinate {
 		return this.x == other.x && this.y == other.y;
 	}
 
-	toIndex(): number {
+	toIndex(): GridIndex {
 		return this.x * Y_COUNT + this.y;
 	}
 

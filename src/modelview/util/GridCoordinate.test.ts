@@ -1,4 +1,4 @@
-import { X_COUNT, Y_COUNT } from "./Constants";
+import { X_COUNT, Y_COUNT } from "../../constants/Constants";
 import GridCoordinate from "./GridCoordinate";
 
 describe("GridCoordinate", () => {

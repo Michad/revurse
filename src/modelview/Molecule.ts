@@ -1,20 +1,19 @@
 import Konva from 'konva';
 import MoleculeModel from '../models/MoleculeModel'
-import ScreenCoordinate from '../util/ScreenCoordinate'
+import ScreenCoordinate from '../view/util/ScreenCoordinate'
 import { Cell } from './Cell';
 import World from './World';
-import GridCoordinate from 'util/GridCoordinate';
+import GridCoordinate from './util/GridCoordinate';
 import Base from './Base';
 
 class Molecule implements Base<MoleculeModel> {
 	model: MoleculeModel
 	world: World
 	currentCell: Cell
-	nextCoord: GridCoordinate | null
 	view: Konva.Node
 	layer: Konva.Layer
 
-	constructor(world : World, moleculeModel : MoleculeModel, layer : Konva.Layer, cell : Cell) {
+	constructor(world: World, moleculeModel: MoleculeModel, layer: Konva.Layer, cell: Cell) {
 		this.world = world;
 		this.model = moleculeModel;
 		this.layer = layer;
@@ -31,26 +30,39 @@ class Molecule implements Base<MoleculeModel> {
 		return 1.0;
 	}
 
-	setFormula(newFormula : string) : void {
+	setFormula(newFormula: string): void {
 		this.model.formula = newFormula;
 		this.view.remove();
 		this.view = this.draw();
 	}
 
-	setCell(newCell : Cell, preserveTransition : boolean = false) {
-		if (!preserveTransition) this.model.transition = 0;
+	setCell(newCell: Cell, force: boolean = false) {
+		if (force) {
+			this.model.cellOffset = newCell.onArrival(this, null, true)!;
+			this.currentCell = newCell;
+		} else {
 
-		let lastCell = this.currentCell;
-		this.currentCell?.onDeparture(this);
-		this.currentCell = newCell;
-		this.model.cellIndex = this.currentCell.coordinate.toIndex();
-		this.nextCoord = this.currentCell.onArrival(this, lastCell);
+			let lastCell = this.currentCell;
+			let offset = newCell.onArrival(this, lastCell, false);
+
+			if (offset !== null) {
+				this.currentCell?.onDeparture(this.model.cellOffset);
+
+				this.currentCell = newCell;
+				this.model.transition = 0;
+				this.model.cellIndex = this.currentCell.coordinate.toIndex();
+				this.model.cellOffset = offset!;
+			}
+		}
+		this.updateView();
 	}
 
 	findNextCell() {
-		let candidate = this.nextCoord ? this.world.findCell(this.nextCoord) : null
-		if(candidate?.canAccept(this.currentCell)) return candidate;
+		let candidate = this.currentCell.findDestination(this.model.cellOffset) 
 		
+		let nextCell = candidate ? this.world.findCell(candidate) : null
+		if (nextCell?.canAccept(this.currentCell)) return nextCell;
+
 		return null;
 	}
 
@@ -62,10 +74,11 @@ class Molecule implements Base<MoleculeModel> {
 			if (this.model.transition >= 1) {
 				this.setCell(nextCell!);
 			}
+
+			this.updateView();
 		} else {
-			this.model.transition = 0;
+			//this.model.transition = 0;
 		}
-		this.updateView();
 	}
 
 	draw() {
