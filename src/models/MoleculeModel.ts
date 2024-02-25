@@ -6,11 +6,18 @@ class MoleculeModel implements BaseModel {
     transition: number
     formula: string
 
-    constructor(cellIndex: GridIndex, cellOffset: GridOffset, transition: number, formula: string) {
-        this.cellOffset = cellOffset;
-        this.cellIndex = cellIndex;
-        this.transition = transition;
-        this.formula = formula;
+    constructor() {
+
+    }
+
+    static new(cellIndex: GridIndex, cellOffset: GridOffset, transition: number, formula: string) {
+        let ret = new MoleculeModel();
+        ret.cellOffset = cellOffset;
+        ret.cellIndex = cellIndex;
+        ret.transition = transition;
+        ret.formula = formula;
+
+        return ret;
     }
 }
 

@@ -36,6 +36,9 @@ class World implements Base<WorldModel> {
             rawWorld.molecules.forEach((m) => {
                 this.addMolecule(m, true);
             });
+        } else {
+            this.initCell(CellModel.new(new GridCoordinate(0, 5).toIndex(), CellType.SOURCE.valueOf(), 60 ));
+
         }
 
     }
@@ -73,7 +76,7 @@ class World implements Base<WorldModel> {
                 this.initCell(CellModel.new(gridCoord.toIndex(), (<any>window).currentSelection.cellType, (<any>window).currentSelection.rotation ?? 0, (<any>window).currentSelection.img()));
                 break;
             case "molecule":
-                this.addMolecule(new MoleculeModel(gridCoord.toIndex(), 0, 0, calculateElementName(Math.floor(Math.random() * 1000), true)));
+                this.addMolecule(MoleculeModel.new(gridCoord.toIndex(), 0, 0, calculateElementName(Math.floor(Math.random() * 1000), true)));
                 break;
             case "erase":
                 this.removeCell(gridCoord);

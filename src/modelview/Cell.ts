@@ -7,8 +7,11 @@ import { rotateAroundCenter } from "../view/util/ViewManipulation";
 import { BORDER_BUFFER, BORDER_BUFFER_X, Y_COUNT } from "../constants/Constants";
 import World from "./World";
 import { CellType } from "../constants/Enums";
-import { mergeElements } from "../util/ChemistryUtil";
+import { calculateElementName, mergeElements } from "../util/ChemistryUtil";
 import straightImg from '../images/straight.png';
+import sourceImg from '../images/source.png';
+import splitImg from '../images/split.png';
+import MoleculeModel from "../models/MoleculeModel";
 
 export abstract class Cell implements Base<CellModel> {
     model: CellModel
@@ -46,6 +49,9 @@ export abstract class Cell implements Base<CellModel> {
             case CellType.SPLIT:
                 cell = new SplitCell();
                 break;
+            case CellType.SOURCE:
+                cell = new SourceCell();
+                break;
         }
 
         cell.world = world;
@@ -74,6 +80,17 @@ export abstract class Cell implements Base<CellModel> {
 
     }
 
+    protected calcMinOffset() {
+        let minOffset = Number.MAX_VALUE;
+        
+        for(let i in this.molecules) {
+            let i2 = parseInt(i);
+            if(i2 < minOffset) minOffset = i2;
+        }
+
+        return minOffset;
+    }
+
     abstract canAccept(fromCell: Cell | null): boolean;
 
     abstract findDestination(offset: GridOffset): GridCoordinate | null;
@@ -92,8 +109,6 @@ abstract class StaticImageCell extends Cell {
 
     draw() {
         let self = this;
-
-        if (!self?.model?.img) return;
 
         var imageObj = new Image();
         let screnCoord = this.world.universe.gridToScreen(self.coordinate);
@@ -141,16 +156,14 @@ abstract class DirectionCell extends StaticImageCell {
         this.molecules.forEach((m) => m.remove());
     }
 
-    protected calcMinOffset() {
-        let minOffset = Number.MAX_VALUE;
-        
-        for(let i in this.molecules) {
-            let i2 = parseInt(i);
-            if(i2 < minOffset) minOffset = i2;
-        }
-
-        return minOffset;
+    canAccept(fromCell: Cell | null): boolean {
+        return this.molecules.length == 0;
     }
+
+    onDeparture(offset: number): void {
+        this.molecules.splice(offset, 1);
+    }
+
 
     findDestination(offset: number): GridCoordinate | null {
         let minOffset = this.calcMinOffset();
@@ -230,6 +243,7 @@ export class StraightCell extends DirectionCell {
     }
 
     canAccept(fromCell: Cell | null): boolean {
+        if(!super.canAccept(fromCell)) return false;
         return fromCell ? this.coordinate.findNeighbor(180 + this.model.rotation).equals(fromCell.coordinate) : true;
     }
 
@@ -237,18 +251,35 @@ export class StraightCell extends DirectionCell {
 
 export class TurnRightCell extends DirectionCell {
     canAccept(fromCell: Cell | null): boolean {
+        if(!super.canAccept(fromCell)) return false;
         return fromCell ? this.coordinate.findNeighbor(120 + this.model.rotation).equals(fromCell.coordinate) : true;
     }
 
 }
 export class TurnLeftCell extends DirectionCell {
     canAccept(fromCell: Cell | null): boolean {
+        if(!super.canAccept(fromCell)) return false;
         return fromCell ? this.coordinate.findNeighbor(240 + this.model.rotation).equals(fromCell.coordinate) : true;
     }
 
 }
 
-export class SplitCell extends DirectionCell {
+export class SplitCell extends StaticImageCell {
+    moleculeCount = 0;
+    
+    protected getImageUrl(): string {
+        return splitImg;
+    }
+    onDeparture(offset: number): void {
+        super.onDeparture(offset);
+        this.moleculeCount--;
+    }
+    onArrival(molecule: Molecule, fromCell: Cell | null, force: boolean): number | null {
+        this.molecules.push(molecule);
+        this.moleculeCount++;
+
+        return this.molecules.length-1;
+    }
     findDestination(offset: number): GridCoordinate | null {
         let minOffset = this.calcMinOffset();
 
@@ -256,7 +287,35 @@ export class SplitCell extends DirectionCell {
     }
 
     canAccept(fromCell: Cell | null): boolean {
+        if(this.moleculeCount > 0) return false;
         return fromCell ? this.coordinate.findNeighbor(180 + this.model.rotation).equals(fromCell.coordinate) : true;
+    }
+}
+
+export class SourceCell extends StaticImageCell {
+    protected getImageUrl(): string {
+        return sourceImg;
+    }
+    canAccept(fromCell: Cell | null): boolean {
+        return fromCell === null;
+    }
+    findDestination(offset: number): GridCoordinate | null {
+        return this.coordinate.findNeighbor(this.model.rotation);
+    }
+    onDeparture(offset: number): void {
+        this.molecules.splice(offset, 1);
+    }
+    onArrival(molecule: Molecule, fromCell: Cell | null, force: boolean): number | null {
+        this.molecules.push(molecule);
+
+        return this.molecules.length-1;
+    }
+    update(deltaT: number): void {
+        super.update(deltaT);
+
+        if(this.molecules.length == 0) {
+            this.world.addMolecule(MoleculeModel.new(this.coordinate.toIndex(), 0, 0, calculateElementName(1, true)));
+        }
     }
 }
 

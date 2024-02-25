@@ -13,6 +13,7 @@ export enum CellType {
     JOIN = 'join',
     META = 'meta',
     SPLIT = 'split',
+    SOURCE = 'source',
 }
 
 /**
