@@ -43,6 +43,9 @@ export abstract class Cell implements Base<CellModel> {
             case CellType.GRID:
                 cell = new GridCell();
                 break;
+            case CellType.SPLIT:
+                cell = new SplitCell();
+                break;
         }
 
         cell.world = world;
@@ -138,13 +141,19 @@ abstract class DirectionCell extends StaticImageCell {
         this.molecules.forEach((m) => m.remove());
     }
 
-    findDestination(offset: number): GridCoordinate | null {
+    protected calcMinOffset() {
         let minOffset = Number.MAX_VALUE;
         
         for(let i in this.molecules) {
             let i2 = parseInt(i);
             if(i2 < minOffset) minOffset = i2;
         }
+
+        return minOffset;
+    }
+
+    findDestination(offset: number): GridCoordinate | null {
+        let minOffset = this.calcMinOffset();
 
         return minOffset === offset ? this.coordinate.findNeighbor(this.model.rotation) : null;
     }
@@ -237,6 +246,18 @@ export class TurnLeftCell extends DirectionCell {
         return fromCell ? this.coordinate.findNeighbor(240 + this.model.rotation).equals(fromCell.coordinate) : true;
     }
 
+}
+
+export class SplitCell extends DirectionCell {
+    findDestination(offset: number): GridCoordinate | null {
+        let minOffset = this.calcMinOffset();
+
+        return minOffset === offset ? this.coordinate.findNeighbor(this.model.rotation + 60 * (minOffset % 2 === 1 ? 1 : -1) ) : null;
+    }
+
+    canAccept(fromCell: Cell | null): boolean {
+        return fromCell ? this.coordinate.findNeighbor(180 + this.model.rotation).equals(fromCell.coordinate) : true;
+    }
 }
 
 export class MetaCell extends StaticImageCell {

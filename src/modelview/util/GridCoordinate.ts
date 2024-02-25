@@ -24,6 +24,7 @@ class GridCoordinate {
 
 	findNeighbor(rot: number) {
 		rot = rot % 360;
+		if(rot < 0) rot += 360;
 		if (rot >= 330 || rot < 30) {
 			if (this.y > 1)
 				return new GridCoordinate(this.x, this.y - 1);

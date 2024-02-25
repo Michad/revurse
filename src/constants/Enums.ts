@@ -11,7 +11,8 @@ export enum CellType {
     SLIGHT_LEFT = 'slight_left',
     SLIGHT_RIGHT = 'slight_right',
     JOIN = 'join',
-    META = 'meta'
+    META = 'meta',
+    SPLIT = 'split',
 }
 
 /**
