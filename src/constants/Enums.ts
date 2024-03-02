@@ -14,6 +14,7 @@ export enum CellType {
     META = 'meta',
     SPLIT = 'split',
     SOURCE = 'source',
+    SINK = 'sink',
 }
 
 /**

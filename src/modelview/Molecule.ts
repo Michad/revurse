@@ -22,7 +22,7 @@ class Molecule implements Base<MoleculeModel> {
 		this.setCell(cell, true);
 	}
 
-	toJsonData() {
+	getModel() {
 		return this.model;
 	}
 

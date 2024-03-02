@@ -10,6 +10,7 @@ import { X_COUNT, Y_COUNT } from "../constants/Constants";
 import { CellType, LayerType } from "../constants/Enums";
 import Base from "./Base";
 import Universe from "./Universe";
+import {newCell} from '../factory/ModelViewFactory';
 
 class World implements Base<WorldModel> {
     stage: Konva.Stage;
@@ -38,6 +39,7 @@ class World implements Base<WorldModel> {
             });
         } else {
             this.initCell(CellModel.new(new GridCoordinate(0, 5).toIndex(), CellType.SOURCE.valueOf(), 60 ));
+            this.initCell(CellModel.new(new GridCoordinate(8, 3).toIndex(), CellType.SINK.valueOf(), 0 ));
 
         }
 
@@ -63,7 +65,7 @@ class World implements Base<WorldModel> {
     }
 
     initGridCell(gridCoord: GridCoordinate) {
-        let gridCell = Cell.new(this, CellModel.new(gridCoord.toIndex(), CellType.GRID, 0), this.layers[LayerType.GRID]);
+        let gridCell = newCell(this, CellModel.new(gridCoord.toIndex(), CellType.GRID, 0), this.layers[LayerType.GRID]);
         
         this.grids[gridCoord.toIndex()] = gridCell;
     }
@@ -87,7 +89,7 @@ class World implements Base<WorldModel> {
     initCell(cellModel: CellModel) {
         let gridCoord = new GridCoordinate(cellModel.index);
 
-        let cell = Cell.new(this, cellModel, this.layers[LayerType.CELL]);
+        let cell = newCell(this, cellModel, this.layers[LayerType.CELL]);
 
         this.cells[gridCoord.toIndex()] = cell;
     }
@@ -129,10 +131,10 @@ class World implements Base<WorldModel> {
         this.cells[gridCoord.toIndex()] = null;
     }
 
-    toJsonData(): WorldModel {
+    getModel(): WorldModel {
         return new WorldModel(
-            this.cells.filter((m) => m).map((c, i) => c!.toJsonData()),
-            [...this.molecules.values()].map((m) => m.toJsonData())
+            this.cells.filter((m) => m).map((c, i) => c!.getModel()),
+            [...this.molecules.values()].map((m) => m.getModel())
         );
     }
 
