@@ -4,6 +4,7 @@ import { rotateAroundCenter } from './view/util/ViewManipulation';
 import ScreenCoordinate from './view/util/ScreenCoordinate';
 import { BORDER_BUFFER, BORDER_BUFFER_X, X_COUNT, Y_COUNT } from './constants/Constants';
 import Universe from './modelview/Universe';
+import UniverseModel from './models/UniverseModel';
 
 
 function makeImage() {
@@ -70,7 +71,7 @@ function init() {
 	let universeModel = null;
 	if (localStorage.universe) {
 		console.log("Loading... " + localStorage.universe);
-		universeModel = JSON.parse(localStorage.universe);
+		universeModel = UniverseModel.copy(JSON.parse(localStorage.universe));
 		if (!universeModel.activeWorld) universeModel = null;
 	}
 
@@ -110,7 +111,7 @@ function init() {
 			e.preventDefault();
 			return false;
 		} else if (e.code === 'KeyS') {
-			localStorage.universe = JSON.stringify(window.universe.toJsonData());
+			localStorage.universe = JSON.stringify(window.universe.getModel());
 			console.log(localStorage.universe);
 		} else if (e.code === 'Tab') {
 			window.currentSelection.rotation += 60;

@@ -1,9 +1,9 @@
 import GridCoordinate from "../util/GridCoordinate";
 import Molecule from "../Molecule";
-import { mergeElements } from "../../util/ChemistryUtil";
 import { StaticImageCell } from "./StaticImageCell";
 import { Cell } from "../Cell";
 import { SourceDirection } from "./SplitCell";
+import FormulaModel from "../../models/FormulaModel";
 
 
 export class JoinCell extends StaticImageCell {
@@ -28,7 +28,7 @@ export class JoinCell extends StaticImageCell {
             let moleculeLiving = this.molecules[SourceDirection.Left];
             let moleculeDying = this.molecules[SourceDirection.Right];
 
-            moleculeLiving.setFormula(mergeElements(moleculeLiving.model.formula, moleculeDying.model.formula));
+            moleculeLiving.setFormula(FormulaModel.merge(moleculeLiving.model.formula, moleculeDying.model.formula));
             this.world.removeMolecule(moleculeDying);
             delete this.molecules[SourceDirection.Left];
             delete this.molecules[SourceDirection.Right];

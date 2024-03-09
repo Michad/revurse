@@ -5,12 +5,12 @@ import Molecule from "./Molecule";
 import CellModel from "../models/CellModel";
 import MoleculeModel from "../models/MoleculeModel";
 import WorldModel from "../models/WorldModel";
-import { calculateElementName } from "../util/ChemistryUtil";
 import { X_COUNT, Y_COUNT } from "../constants/Constants";
 import { CellType, LayerType } from "../constants/Enums";
 import Base from "./Base";
 import Universe from "./Universe";
 import {newCell} from '../factory/ModelViewFactory';
+import FormulaModel from "../models/FormulaModel";
 
 class World implements Base<WorldModel> {
     stage: Konva.Stage;
@@ -78,7 +78,7 @@ class World implements Base<WorldModel> {
                 this.initCell(CellModel.new(gridCoord.toIndex(), (<any>window).currentSelection.cellType, (<any>window).currentSelection.rotation ?? 0, (<any>window).currentSelection.img()));
                 break;
             case "molecule":
-                this.addMolecule(MoleculeModel.new(gridCoord.toIndex(), 0, 0, calculateElementName(Math.floor(Math.random() * 1000), true)));
+                this.addMolecule(MoleculeModel.new(gridCoord.toIndex(), 0, 0, FormulaModel.newUnary(Math.floor(Math.random() * 1000))));
                 break;
             case "erase":
                 this.removeCell(gridCoord);
@@ -132,7 +132,7 @@ class World implements Base<WorldModel> {
     }
 
     getModel(): WorldModel {
-        return new WorldModel(
+        return WorldModel.new(
             this.cells.filter((m) => m).map((c, i) => c!.getModel()),
             [...this.molecules.values()].map((m) => m.getModel())
         );

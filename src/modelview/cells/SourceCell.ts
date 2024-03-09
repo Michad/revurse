@@ -1,10 +1,10 @@
 import GridCoordinate from "../util/GridCoordinate";
 import Molecule from "../Molecule";
-import { calculateElementName } from "../../util/ChemistryUtil";
 import sourceImg from '../../images/source.png';
 import MoleculeModel from "../../models/MoleculeModel";
 import { StaticImageCell } from "./StaticImageCell";
 import { Cell } from "../Cell";
+import FormulaModel from "../../models/FormulaModel";
 
 
 export class SourceCell extends StaticImageCell {
@@ -29,7 +29,7 @@ export class SourceCell extends StaticImageCell {
         super.update(deltaT);
 
         if (this.molecules.length == 0) {
-            this.world.addMolecule(MoleculeModel.new(this.coordinate.toIndex(), 0, 0, calculateElementName(1, true)));
+            this.world.addMolecule(MoleculeModel.new(this.coordinate.toIndex(), 0, 0, FormulaModel.newUnary(1)));
         }
     }
 }

@@ -27,7 +27,7 @@ class CellModel implements BaseModel {
     static copy(obj : any) {
         let cell = new CellModel();
         Object.assign(cell, obj);
-        cell.type = CellType[obj.type];
+        cell.type = enumLookup(CellType, obj.type)!;
 
         return cell;
     }

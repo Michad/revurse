@@ -22,10 +22,10 @@ export default class Universe implements Base<UniverseModel> {
         this.draw();
 
         if (model) {
-            this.activeWorld = new World(this.stage, this, model?.worlds[model?.activeWorld]);
+            this.activeWorld = new World(this.stage, this, model?.worlds.get(model?.activeWorld)!);
             this.activeWorldName = model?.activeWorld;
             this.savedWorldModels = model?.worlds;
-            delete this.savedWorldModels[this.activeWorldName];
+            this.savedWorldModels.delete(this.activeWorldName);
         } else {
             this.activeWorldName = "todo";
             this.activeWorld = new World(this.stage, this, null);
@@ -36,7 +36,7 @@ export default class Universe implements Base<UniverseModel> {
 
 
     getModel(): UniverseModel {
-        return new UniverseModel(this.activeWorldName, { ...this.savedWorldModels, [this.activeWorldName]: this.activeWorld.getModel() });
+        return UniverseModel.new(this.activeWorldName, { ...this.savedWorldModels, [this.activeWorldName]: this.activeWorld.getModel() });
     }
 
     remove(): void {

@@ -25,7 +25,7 @@ export enum CellType {
  * @param keyOrValue A key or value from the enum
  * @returns The value of the enum (but typed against the enum)
  */
-export function enumLookup<T>(enumType: any, keyOrValue: T[keyof T] | string) :  T | null {
+export function enumLookup<T>(enumType: any, keyOrValue: T[keyof T] | string | number) :  T | null {
     let enumKeys = (Object.keys(enumType as {}) as (keyof T)[]);
 
     let keyResult = (enumKeys.find((k) => k === keyOrValue || enumType[k] === keyOrValue) as keyof T) || null;

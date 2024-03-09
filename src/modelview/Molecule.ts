@@ -5,6 +5,7 @@ import { Cell } from './Cell';
 import World from './World';
 import GridCoordinate from './util/GridCoordinate';
 import Base from './Base';
+import FormulaModel from '../models/FormulaModel';
 
 class Molecule implements Base<MoleculeModel> {
 	model: MoleculeModel
@@ -30,7 +31,7 @@ class Molecule implements Base<MoleculeModel> {
 		return 1.0;
 	}
 
-	setFormula(newFormula: string): void {
+	setFormula(newFormula: FormulaModel): void {
 		this.model.formula = newFormula;
 		this.view.remove();
 		this.view = this.draw();
@@ -85,7 +86,7 @@ class Molecule implements Base<MoleculeModel> {
 		let text = new Konva.Text({
 			x: 0,
 			y: 0,
-			text: this.model.formula,
+			text: this.model.formula.toString(),
 			fontSize: 30,
 			fontFamily: 'Calibri',
 			fill: 'orange',
