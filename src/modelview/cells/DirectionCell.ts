@@ -17,7 +17,7 @@ export abstract class DirectionCell extends StaticImageCell {
         this.molecules.forEach((m) => m.remove());
     }
 
-    canAccept(fromCell: Cell | null): boolean {
+    canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         return this.molecules.length == 0;
     }
 

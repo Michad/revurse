@@ -37,6 +37,10 @@ class Molecule implements Base<MoleculeModel> {
 		this.view = this.draw();
 	}
 
+	getFormula(): FormulaModel {
+		return this.model.formula;
+	}
+
 	setCell(newCell: Cell, force: boolean = false) {
 		if (force) {
 			this.model.cellOffset = newCell.onArrival(this, null, true)!;
@@ -62,7 +66,7 @@ class Molecule implements Base<MoleculeModel> {
 		let candidate = this.currentCell.findDestination(this.model.cellOffset) 
 		
 		let nextCell = candidate ? this.world.findCell(candidate) : null
-		if (nextCell?.canAccept(this.currentCell)) return nextCell;
+		if (nextCell?.canAccept(this, this.currentCell)) return nextCell;
 
 		return null;
 	}
@@ -89,7 +93,9 @@ class Molecule implements Base<MoleculeModel> {
 			text: this.model.formula.toString(),
 			fontSize: 30,
 			fontFamily: 'Calibri',
-			fill: 'orange',
+			fill: 'red',
+			stroke: 'white',
+			strokeWidth: 0.5,
 			align: 'center'
 		});
 

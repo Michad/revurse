@@ -13,7 +13,7 @@ export class MetaCell extends StaticImageCell {
         return null;
     }
 
-    canAccept(fromCell: Cell | null): boolean {
+    canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         return true;
     }
 

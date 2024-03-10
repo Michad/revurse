@@ -9,7 +9,7 @@ export class SinkCell extends StaticImageCell {
     protected getImageUrl(): string {
         return sinkImg;
     }
-    canAccept(fromCell: Cell | null): boolean {
+    canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         return true;
     }
     findDestination(offset: number): GridCoordinate | null {

@@ -11,7 +11,7 @@ export class SourceCell extends StaticImageCell {
     protected getImageUrl(): string {
         return sourceImg;
     }
-    canAccept(fromCell: Cell | null): boolean {
+    canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         return fromCell === null;
     }
     findDestination(offset: number): GridCoordinate | null {

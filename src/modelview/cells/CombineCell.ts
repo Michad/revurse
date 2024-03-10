@@ -6,7 +6,7 @@ import { SourceDirection } from "./SplitCell";
 import FormulaModel from "../../models/FormulaModel";
 
 
-export class JoinCell extends StaticImageCell {
+export class CombineCell extends StaticImageCell {
     getImageUrl(): string {
         return this.model.img!;
     }
@@ -44,7 +44,7 @@ export class JoinCell extends StaticImageCell {
         return null;
     }
 
-    canAccept(fromCell: Cell | null): boolean {
+    canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         if (!fromCell) return false;
 
         let dir = this.findDirection(fromCell.coordinate);

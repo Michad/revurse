@@ -15,7 +15,7 @@ export class GridCell extends Cell {
             y: screenCoord.y,
             sides: 6,
             radius: screenCalc.polyWidth / 2,
-            fill: isEdge ? 'yellow' : 'green',
+            fill: isEdge ? 'yellow' : 'lightgrey',
             stroke: 'black',
             strokeWidth: 4,
             /*	    shadowOffsetX : 20,
@@ -51,7 +51,7 @@ export class GridCell extends Cell {
         return null;
     }
 
-    canAccept(fromCell: Cell | null): boolean {
+    canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         throw new Error("Grid Cells can't accept molecules");
     }
     onArrival(molecule: Molecule, fromCell: Cell | null, force: boolean): GridOffset | null {

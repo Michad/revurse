@@ -47,11 +47,13 @@ class World implements Base<WorldModel> {
 
     addMolecule(moleculeModel: MoleculeModel, force: boolean = false) {
         let c = this.findCell(new GridCoordinate(moleculeModel.cellIndex));
-
-        if (c && (force || c.canAccept(null))) {
+        if( c) {
             let m = new Molecule(this, moleculeModel, this.layers[LayerType.MOLECULE], c);
-            
-            this.molecules.add(m);
+
+            if (force || c.canAccept(m, null)) {
+                
+                this.molecules.add(m);
+            } 
         }
     }
 

@@ -47,9 +47,10 @@ export abstract class Cell implements Base<CellModel> {
     /**
      * Whether this cell can accept a molecule from another cell. 
      * TODO: merge with onArrival? Or maybe replace with reservation system
+     * @param molecule The molecule that's arriving in this cell from fromCell
      * @param fromCell The cell the molecule is coming from
      */
-    abstract canAccept(fromCell: Cell | null): boolean;
+    abstract canAccept(molecule: Molecule, fromCell: Cell | null): boolean;
 
     /**
      * Gets the place a molecule should be moving towards next, or null if it can't move on for whatever reason 

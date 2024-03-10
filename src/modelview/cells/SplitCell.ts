@@ -27,7 +27,7 @@ export class SplitCell extends StaticImageCell {
         return minOffset === offset ? this.coordinate.findNeighbor(this.model.rotation + 60 * (minOffset % 2 === 1 ? 1 : -1)) : null;
     }
 
-    canAccept(fromCell: Cell | null): boolean {
+    canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         if (this.moleculeCount > 0) return false;
         return fromCell ? this.coordinate.findNeighbor(180 + this.model.rotation).equals(fromCell.coordinate) : true;
     }
