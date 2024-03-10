@@ -33,3 +33,5 @@ export const ELEMENT_NAME_PARTS = [
     { name: 'yank', code: 'y' },
     { name: 'zul', code: 'z' },
 ];
+
+export const SUBSCRIPTS = ["₀","₁","₂","₃","₄","₅","₆","₇","₈","₉"];

@@ -1,4 +1,4 @@
-import { ELEMENT_NAME_PARTS } from "../constants/Constants";
+import { ELEMENT_NAME_PARTS, SUBSCRIPTS } from "../constants/Constants";
 import BaseModel from "./BaseModel";
 
 /**
@@ -47,7 +47,14 @@ class Component {
             name = name.replace("ii", "i");
             name = name.replace("kk", "k");
         } else {
-            name += this.count;
+            if(this.count > 1 && this.count < SUBSCRIPTS.length) {
+                name += SUBSCRIPTS[this.count];
+            } else if(this.count >= SUBSCRIPTS.length) {
+                //Turn count into a char array, turn that into subscript chars, then restringify
+                let subscript = [...this.count.toString()].map(c => SUBSCRIPTS[parseInt(c)]).reduce((a,b)=>a+b)
+
+                name += subscript;
+            }
         }
     
         return name.charAt(0).toUpperCase() + name.substring(1);
@@ -98,7 +105,7 @@ export default class FormulaModel implements BaseModel {
      * As in Sodium and Chlorine becoming salt
      */
     static merge(modelA : FormulaModel, modelB: FormulaModel) : FormulaModel {
-        let combinedComponents = modelA.components;
+        let combinedComponents = modelA.components.map( c => Component.copy(c));
         
         modelB.components.forEach( (newComponent) => {
             let existingComponent = combinedComponents.find( (candidate) => candidate.atomicNumber === newComponent.atomicNumber );
