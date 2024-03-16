@@ -62,6 +62,26 @@ function loadHoverCell(layer, initialPos) {
 	}
 }
 
+function onButtonClick(buttonElement) {
+	let tool = buttonElement.attributes['data-tool']?.value;
+	let cellType = buttonElement.attributes['data-cell']?.value;
+	let href = buttonElement.getElementsByTagName("img")[0]?.attributes["src"]?.value;
+
+	document.querySelectorAll('.selected').forEach((s) => s.classList.remove('selected'));
+	buttonElement.classList.add('selected');
+
+	window.currentSelection = { tool: tool, cellType: cellType, img: () => href, rotation: 0 };
+
+	if (window.hoverNode) {
+		window.hoverNode.remove();
+		delete window.hoverNode;
+	}
+
+	if (cellType) {
+		loadHoverCell(cursorLayer, window.universe.stage.getPointerPosition());
+	}
+}
+
 
 function init() {
 
@@ -85,28 +105,39 @@ function init() {
 
 		e.evt.preventDefault();
 
-		let curScale = stage.scaleX();
-		let pointer = new ScreenCoordinate(stage.getPointerPosition());
-		let stagePos = new ScreenCoordinate(stage.getPosition());
-		let center = new ScreenCoordinate(stage.getWidth(), stage.getHeight()).scale(0.5);
+		if(window.hoverNode) { 
+			window.currentSelection.rotation += 60 * (e.evt.deltaY < 0 ? -1 : 1);
 
-		let newScale = curScale * (e.evt.deltaY < 0 ? SCALE_FACTOR : 1.0 / SCALE_FACTOR);
-		stage.scale({ x: newScale, y: newScale });
+			if (window.hoverNode) {
+				rotateAroundCenter(hoverNode, currentSelection.rotation);
+			}
+		} else {
+			let curScale = stage.scaleX();
+			let pointer = new ScreenCoordinate(stage.getPointerPosition());
+			let stagePos = new ScreenCoordinate(stage.getPosition());
+			let center = new ScreenCoordinate(stage.getWidth(), stage.getHeight()).scale(0.5);
 
-		//TODO: decide which to go with
-		//Center on cursor
-		//let newPos = pointer.minus(pointer.minus(stagePos).scale(newScale / curScale));
-		//Center on center
-		let newPos = center.minus(center.minus(stagePos).scale(newScale / curScale));
+			let newScale = curScale * (e.evt.deltaY < 0 ? SCALE_FACTOR : 1.0 / SCALE_FACTOR);
+			stage.scale({ x: newScale, y: newScale });
 
-		stage.position(newPos);
+			//TODO: decide which to go with
+			//Center on cursor
+			//let newPos = pointer.minus(pointer.minus(stagePos).scale(newScale / curScale));
+			//Center on center
+			let newPos = center.minus(center.minus(stagePos).scale(newScale / curScale));
+
+			stage.position(newPos);
+		}
 	});
 
 	document.addEventListener('keydown', function (e) {
-		if (e.code === 'Escape') {
-			delete localStorage.universe;
-
-			window.location = window.location;
+		if (e.code === 'Escape' && e.shiftKey) {
+			if(confirm("Destory universe?")) {
+				console.log("Deleting: " + localStorage.universe);
+				delete localStorage.universe;
+	
+				window.location = window.location;
+			}
 
 			e.preventDefault();
 			return false;
@@ -114,7 +145,11 @@ function init() {
 			localStorage.universe = JSON.stringify(window.universe.getModel());
 			console.log(localStorage.universe);
 		} else if (e.code === 'Tab') {
-			window.currentSelection.rotation += 60;
+			if(e.shiftKey) {
+				window.currentSelection.rotation -= 60;
+			} else {
+				window.currentSelection.rotation += 60;
+			}
 
 			if (window.hoverNode) {
 				rotateAroundCenter(hoverNode, currentSelection.rotation);
@@ -122,6 +157,9 @@ function init() {
 
 			e.preventDefault();
 			return false;
+		} else {
+			let buttonElement = document.querySelector('.button[data-shortcut="' + e.code + '"]');
+			if(buttonElement) onButtonClick(buttonElement);
 		}
 
 	});
@@ -137,23 +175,7 @@ function init() {
 
 	document.querySelectorAll('.button')
 		.forEach((b, i) => b.addEventListener('click', function (e) {
-			let tool = b.attributes['data-tool']?.value;
-			let cellType = b.attributes['data-cell']?.value;
-			let href = b.getElementsByTagName("img")[0]?.attributes["src"]?.value;
-
-			document.querySelectorAll('.selected').forEach((s) => s.classList.remove('selected'));
-			b.classList.add('selected');
-
-			window.currentSelection = { tool: tool, cellType: cellType, img: () => href, rotation: 0 };
-
-			if (window.hoverNode) {
-				window.hoverNode.remove();
-				delete window.hoverNode;
-			}
-
-			if (cellType) {
-				loadHoverCell(cursorLayer, stage.getPointerPosition());
-			}
+			onButtonClick(b);
 
 			e.preventDefault();
 			return false;
