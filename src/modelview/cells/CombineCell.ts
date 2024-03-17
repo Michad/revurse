@@ -2,8 +2,8 @@ import GridCoordinate from "../util/GridCoordinate";
 import Molecule from "../Molecule";
 import { StaticImageCell } from "./StaticImageCell";
 import { Cell } from "../Cell";
-import { SourceDirection } from "./SplitCell";
 import FormulaModel from "../../models/FormulaModel";
+import { CellSlot } from "../../constants/Enums";
 
 
 export class CombineCell extends StaticImageCell {
@@ -11,35 +11,29 @@ export class CombineCell extends StaticImageCell {
         return this.model.img!;
     }
 
-    private findDirection(coord: GridCoordinate): SourceDirection | null {
-        if (this.coordinate.findNeighbor(120 + this.model.rotation).equals(coord)) {
-            return SourceDirection.Right;
-        }
-        if (this.coordinate.findNeighbor(240 + this.model.rotation).equals(coord)) {
-            return SourceDirection.Left;
-        }
-
-        return null;
+    protected combineFormula(formulaA: FormulaModel, formulaB: FormulaModel) : FormulaModel {
+        return FormulaModel.merge(formulaA, formulaB);
     }
 
     update(deltaT: number): void {
-        if (this.molecules[SourceDirection.Left] && this.molecules[SourceDirection.Right] && !this.molecules[SourceDirection.Out]) {
+        if (this.molecules[CellSlot.BACKWARD_LEFT] && this.molecules[CellSlot.BACKWARD_RIGHT] && !this.molecules[CellSlot.CENTER]) {
 
-            let moleculeLiving = this.molecules[SourceDirection.Left];
-            let moleculeDying = this.molecules[SourceDirection.Right];
+            let moleculeLiving = this.molecules[CellSlot.BACKWARD_LEFT];
+            let moleculeDying = this.molecules[CellSlot.BACKWARD_RIGHT];
 
-            moleculeLiving.setFormula(FormulaModel.merge(moleculeLiving.model.formula, moleculeDying.model.formula));
+            moleculeLiving.setFormula(this.combineFormula(moleculeLiving.model.formula, moleculeDying.model.formula));
             this.world.removeMolecule(moleculeDying);
-            delete this.molecules[SourceDirection.Left];
-            delete this.molecules[SourceDirection.Right];
+            this.molecules[CellSlot.BACKWARD_LEFT] = null;
+            this.molecules[CellSlot.BACKWARD_RIGHT] = null;
 
-            moleculeLiving.model.cellOffset = SourceDirection.Out.valueOf();
-            this.molecules[SourceDirection.Out] = moleculeLiving;
+            moleculeLiving.setSlot(CellSlot.CENTER);
+            this.molecules[CellSlot.CENTER] = moleculeLiving;
         }
     }
 
-    findDestination(offset: number): GridCoordinate | null {
-        if (offset === SourceDirection.Out) return this.coordinate.findNeighbor(this.model.rotation);
+    findDestination(offset: CellSlot): GridCoordinate | CellSlot | null {
+        if (offset === CellSlot.FORWARD) return this.coordinate.findNeighbor(this.model.rotation);
+        if (offset === CellSlot.CENTER) return CellSlot.FORWARD;
 
         return null;
     }
@@ -47,25 +41,11 @@ export class CombineCell extends StaticImageCell {
     canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         if (!fromCell) return false;
 
-        let dir = this.findDirection(fromCell.coordinate);
+        let dir = this.findSlotForNeighbor(fromCell.coordinate);
+
+        if(dir !== CellSlot.BACKWARD_RIGHT && dir !== CellSlot.BACKWARD_LEFT) return false;
 
         return dir !== null && this.molecules[dir] == null;
     }
 
-    onArrival(molecule: Molecule, fromCell: Cell | null, force: boolean): GridOffset | null {
-        if (force) {
-            let offset = molecule.model.cellOffset;
-            this.molecules[offset] = molecule;
-            return offset;
-        } else {
-            let dir = this.findDirection(fromCell!.coordinate);
-
-            if (dir == null) return null;
-            let offset: GridOffset = dir!.valueOf();
-
-            this.molecules[offset] = molecule;
-
-            return offset;
-        }
-    }
 }

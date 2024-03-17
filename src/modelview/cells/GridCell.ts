@@ -2,11 +2,12 @@ import Konva from "konva";
 import GridCoordinate from "../util/GridCoordinate";
 import Molecule from "../Molecule";
 import { Cell } from "../Cell";
+import { CellSlot } from "../../constants/Enums";
 
 
 export class GridCell extends Cell {
     draw() {
-        let screenCoord = this.world.universe.gridToScreen(this.coordinate);
+        let screenCoord = this.calculateScreenCoord();
         let screenCalc = this.world.universe.getScreenCalculations();
         let isEdge = this.coordinate.isEdge();
 
@@ -54,7 +55,7 @@ export class GridCell extends Cell {
     canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
         throw new Error("Grid Cells can't accept molecules");
     }
-    onArrival(molecule: Molecule, fromCell: Cell | null, force: boolean): GridOffset | null {
+    onArrival(molecule: Molecule, fromCell: Cell | null, force: boolean): CellSlot | null {
         throw new Error("Grid Cells can't accept molecules");
     }
 

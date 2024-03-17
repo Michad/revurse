@@ -1,9 +1,10 @@
+import { CellSlot } from "../constants/Enums";
 import BaseModel from "./BaseModel";
 import FormulaModel from "./FormulaModel";
 
 class MoleculeModel implements BaseModel {
     cellIndex: GridIndex
-    cellOffset: GridOffset
+    cellOffset: CellSlot
     transition: number
     formula: FormulaModel
 
@@ -11,7 +12,7 @@ class MoleculeModel implements BaseModel {
 
     }
 
-    static new(cellIndex: GridIndex, cellOffset: GridOffset, transition: number, formula: FormulaModel) {
+    static new(cellIndex: GridIndex, cellOffset: CellSlot, transition: number, formula: FormulaModel) {
         let ret = new MoleculeModel();
         ret.cellOffset = cellOffset;
         ret.cellIndex = cellIndex;

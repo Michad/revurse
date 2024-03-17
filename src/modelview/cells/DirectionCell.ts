@@ -2,6 +2,7 @@ import GridCoordinate from "../util/GridCoordinate";
 import Molecule from "../Molecule";
 import { StaticImageCell } from "./StaticImageCell";
 import { Cell } from "../Cell";
+import { CellSlot } from "../../constants/Enums";
 
 export abstract class DirectionCell extends StaticImageCell {
     constructor() {
@@ -14,28 +15,25 @@ export abstract class DirectionCell extends StaticImageCell {
 
     remove() {
         super.remove();
-        this.molecules.forEach((m) => m.remove());
+        this.molecules.forEach((m) => m?.remove());
     }
 
     canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
-        return this.molecules.length == 0;
+        if(fromCell) {
+            let slot = this.findSlotForNeighbor(fromCell?.coordinate);
+            return slot != null && !this.molecules[slot.valueOf()]
+        }
+
+        return false;
     }
 
-    onDeparture(offset: number): void {
-        this.molecules.splice(offset, 1);
+    findDestination(offset: CellSlot): GridCoordinate | CellSlot | null {
+        if(offset === CellSlot.FORWARD) return this.coordinate.findNeighbor(this.model.rotation);
+
+        if(offset === CellSlot.CENTER) return this.molecules[CellSlot.FORWARD] ? null : CellSlot.FORWARD; 
+
+        return this.molecules[CellSlot.CENTER] ? null : CellSlot.CENTER;
     }
 
-
-    findDestination(offset: number): GridCoordinate | null {
-        let minOffset = this.calcMinOffset();
-
-        return minOffset === offset ? this.coordinate.findNeighbor(this.model.rotation) : null;
-    }
-
-    onArrival(molecule: Molecule, fromCell: Cell | null, force: boolean): GridOffset | null {
-        this.molecules.push(molecule);
-
-        return this.molecules.length - 1;
-    }
 
 }

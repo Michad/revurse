@@ -6,6 +6,7 @@ import World from './World';
 import GridCoordinate from './util/GridCoordinate';
 import Base from './Base';
 import FormulaModel from '../models/FormulaModel';
+import { CellSlot } from '../constants/Enums';
 
 class Molecule implements Base<MoleculeModel> {
 	model: MoleculeModel
@@ -20,7 +21,7 @@ class Molecule implements Base<MoleculeModel> {
 		this.layer = layer;
 		this.view = this.draw();
 
-		this.setCell(cell, true);
+		this.setCellWithEvents(cell, true);
 	}
 
 	getModel() {
@@ -28,7 +29,11 @@ class Molecule implements Base<MoleculeModel> {
 	}
 
 	speed() {
-		return 1.0;
+		return 0.3;
+	}
+
+	setSlot(slot : CellSlot) {
+		this.model.cellOffset = slot;
 	}
 
 	setFormula(newFormula: FormulaModel): void {
@@ -41,7 +46,7 @@ class Molecule implements Base<MoleculeModel> {
 		return this.model.formula;
 	}
 
-	setCell(newCell: Cell, force: boolean = false) {
+	setCellWithEvents(newCell: Cell, force: boolean = false) {
 		if (force) {
 			this.model.cellOffset = newCell.onArrival(this, null, true)!;
 			this.currentCell = newCell;
@@ -62,22 +67,32 @@ class Molecule implements Base<MoleculeModel> {
 		this.updateView();
 	}
 
-	findNextCell() {
-		let candidate = this.currentCell.findDestination(this.model.cellOffset) 
-		
-		let nextCell = candidate ? this.world.findCell(candidate) : null
-		if (nextCell?.canAccept(this, this.currentCell)) return nextCell;
+	findNextStep() : [Cell, CellSlot] | null {
+		let candidate = this.currentCell.findDestination(this.model.cellOffset);
+
+		if(candidate instanceof GridCoordinate) {
+			let nextCell = candidate ? this.world.findCell(candidate) : null
+			if (nextCell?.canAccept(this, this.currentCell)) return [nextCell, nextCell.findSlotForNeighbor(this.currentCell.coordinate)!];
+		} else if(candidate != null) {
+			return [this.currentCell, candidate];
+		}
 
 		return null;
 	}
 
 	update(deltaT) {
-		let nextCell = this.findNextCell();
-		if (nextCell) {
+		let nextStep = this.findNextStep();
+		if (nextStep) {
 			this.model.transition += deltaT / this.speed();
 
 			if (this.model.transition >= 1) {
-				this.setCell(nextCell!);
+				if(nextStep[0] && nextStep[0] != this.currentCell) {
+					this.setCellWithEvents(nextStep[0]);
+				} else {
+					this.currentCell.onSlotTransfer(this.model.cellOffset, nextStep[1]);
+					this.setSlot(nextStep[1]);
+					this.model.transition = 0;
+				}
 			}
 
 			this.updateView();
@@ -110,13 +125,11 @@ class Molecule implements Base<MoleculeModel> {
 
 	updateView() {
 		let pos: ScreenCoordinate;
-		let nextCell = this.findNextCell();
+		let nextCell = this.findNextStep();
+		pos = this.currentCell.calculateSlotScreenCoord(this.model.cellOffset);
 		if (nextCell) {
-			pos = this.world.universe.gridToScreen(this.currentCell.coordinate)
-				.interpolate(this.world.universe.gridToScreen(nextCell.coordinate), this.model.transition);
-		} else {
-			pos = this.world.universe.gridToScreen(this.currentCell.coordinate);
-		}
+			pos = pos.interpolate(nextCell[0].calculateSlotScreenCoord(nextCell[1]), this.model.transition);
+		} 
 
 		//console.log(JSON.stringify(pos));
 		this.view.position(pos);

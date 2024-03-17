@@ -10,7 +10,7 @@ export abstract class StaticImageCell extends Cell {
         let self = this;
 
         var imageObj = new Image();
-        let screnCoord = this.world.universe.gridToScreen(self.coordinate);
+        let screnCoord = this.calculateScreenCoord();
         let screenCalc = this.world.universe.getScreenCalculations();
 
         imageObj.onload = function () {

@@ -83,10 +83,5 @@ export default class Universe implements Base<UniverseModel> {
         return res;
     }
 
-    gridToScreen(gridCoord: GridCoordinate) {
-        let screenCalculations = this.getScreenCalculations();
-
-        return new ScreenCoordinate((gridCoord.x) * screenCalculations.polyRowWidth + screenCalculations.xMin + screenCalculations.polyWidth / 2, (gridCoord.y + (gridCoord.x % 2) / 2) * screenCalculations.polyHeight + screenCalculations.yMin);
-    }
 
 }

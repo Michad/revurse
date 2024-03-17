@@ -19,6 +19,16 @@ export enum CellType {
     SINK = 'sink',
 }
 
+export enum CellSlot {
+    CENTER = 0,
+    FORWARD = 1,
+    FORWARD_RIGHT = 2,
+    BACKWARD_RIGHT = 3,
+    BACKWARD = 4,
+    BACKWARD_LEFT = 5,
+    FORWARD_LEFT = 6
+}
+
 /**
  * Typescript enum lookup doesn't handle reverse lookups of string enums. This utility function makes 
  * does reverse/forward lookups for both number and string enums
