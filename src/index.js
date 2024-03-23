@@ -5,6 +5,7 @@ import ScreenCoordinate from './view/util/ScreenCoordinate';
 import { BORDER_BUFFER, BORDER_BUFFER_X, X_COUNT, Y_COUNT } from './constants/Constants';
 import Universe from './modelview/Universe';
 import UniverseModel from './models/UniverseModel';
+import { LayerType } from './constants/Enums';
 
 
 function makeImage() {
@@ -14,6 +15,7 @@ function makeImage() {
 	let revertSize = stage.size();
 	let revertScale = stage.scale();
 	let screenCalcs = window.universe.getScreenCalculations();
+	window.universe.activeWorld.layers[LayerType.MOLECULE].opacity(0);
 
 	stage.position(new ScreenCoordinate(-screenCalcs.xMin, -screenCalcs.yMin));
 	stage.size({ width: screenCalcs.xMax - screenCalcs.xMin, height: screenCalcs.yMax - screenCalcs.yMin });
@@ -28,6 +30,7 @@ function makeImage() {
 	stage.position(revertPos);
 	stage.size(revertSize);
 	stage.scale(revertScale);
+	window.universe.activeWorld.layers[LayerType.MOLECULE].opacity(1);
 
 	return dataURL;
 }
