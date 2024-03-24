@@ -11,17 +11,28 @@ import { CellSlot } from '../constants/Enums';
 class Molecule implements Base<MoleculeModel> {
 	model: MoleculeModel
 	world: World
-	currentCell: Cell
-	view: Konva.Node
+	currentCell: Cell<any>
+	view: Konva.Text
 	layer: Konva.Layer
 
-	constructor(world: World, moleculeModel: MoleculeModel, layer: Konva.Layer, cell: Cell) {
+	constructor(world: World, moleculeModel: MoleculeModel, layer: Konva.Layer, cell: Cell<any>) {
 		this.world = world;
 		this.model = moleculeModel;
 		this.layer = layer;
 		this.view = this.draw();
 
-		this.setCellWithEvents(cell, true);
+		this.currentCell = cell;
+		this.model.setCellWithEvents(cell.model, true);
+	}
+
+	onChange(): void {
+		if(this.view.text() !== this.model.formula.toString()) {
+			this.view?.remove();
+			this.view = this.draw();
+		} 
+		if(this.currentCell.getModel().coordinate !== this.model.coordinate) {
+			this.currentCell = this.world.findCell(this.model.coordinate)!;
+		}
 	}
 
 	getModel() {
@@ -32,73 +43,8 @@ class Molecule implements Base<MoleculeModel> {
 		return 0.3;
 	}
 
-	setSlot(slot : CellSlot) {
-		this.model.cellOffset = slot;
-	}
-
-	setFormula(newFormula: FormulaModel): void {
-		this.model.formula = newFormula;
-		this.view.remove();
-		this.view = this.draw();
-	}
-
 	getFormula(): FormulaModel {
 		return this.model.formula;
-	}
-
-	setCellWithEvents(newCell: Cell, force: boolean = false) {
-		if (force) {
-			this.model.cellOffset = newCell.onArrival(this, null, true)!;
-			this.currentCell = newCell;
-		} else {
-
-			let lastCell = this.currentCell;
-			let offset = newCell.onArrival(this, lastCell, false);
-
-			if (offset !== null) {
-				this.currentCell?.onDeparture(this.model.cellOffset);
-
-				this.currentCell = newCell;
-				this.model.transition = 0;
-				this.model.cellIndex = this.currentCell.coordinate.toIndex();
-				this.model.cellOffset = offset!;
-			}
-		}
-		this.updateView();
-	}
-
-	findNextStep() : [Cell, CellSlot] | null {
-		let candidate = this.currentCell.findDestination(this.model.cellOffset);
-
-		if(candidate instanceof GridCoordinate) {
-			let nextCell = candidate ? this.world.findCell(candidate) : null
-			if (nextCell?.canAccept(this, this.currentCell)) return [nextCell, nextCell.findSlotForNeighbor(this.currentCell.coordinate)!];
-		} else if(candidate != null) {
-			return [this.currentCell, candidate];
-		}
-
-		return null;
-	}
-
-	update(deltaT) {
-		let nextStep = this.findNextStep();
-		if (nextStep) {
-			this.model.transition += deltaT / this.speed();
-
-			if (this.model.transition >= 1) {
-				if(nextStep[0] && nextStep[0] != this.currentCell) {
-					this.setCellWithEvents(nextStep[0]);
-				} else {
-					this.currentCell.onSlotTransfer(this.model.cellOffset, nextStep[1]);
-					this.setSlot(nextStep[1]);
-					this.model.transition = 0;
-				}
-			}
-
-			this.updateView();
-		} else {
-			//this.model.transition = 0;
-		}
 	}
 
 	draw() {
@@ -123,12 +69,13 @@ class Molecule implements Base<MoleculeModel> {
 		return text;
 	}
 
-	updateView() {
+	updateView(deltaT: number) {
 		let pos: ScreenCoordinate;
-		let nextCell = this.findNextStep();
-		pos = this.currentCell.calculateSlotScreenCoord(this.model.cellOffset);
-		if (nextCell) {
-			pos = pos.interpolate(nextCell[0].calculateSlotScreenCoord(nextCell[1]), this.model.transition);
+		let nextCellModel = this.model.findNextStep();
+		pos = this.currentCell.calculateSlotScreenCoord(this.model.cellSlot);
+		if (nextCellModel) {
+			let nextCell = this.world.findCell(nextCellModel[0].coordinate);
+			pos = pos.interpolate(nextCell!.calculateSlotScreenCoord(nextCellModel[1]), this.model.transition);
 		} 
 
 		//console.log(JSON.stringify(pos));

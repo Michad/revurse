@@ -86,6 +86,27 @@ function onButtonClick(buttonElement) {
 }
 
 
+function jsonReplacer(key, value) {
+	if(key.startsWith("_")) return undefined;
+				
+	if (value instanceof Map) {
+		return {
+			dataType: 'Map',
+			value: Array.from(value.entries()), // or with spread: value: [...value]
+		};
+	} else {
+		return value;
+	}
+}
+function jsonReviver(key, value) {
+	if (typeof value === 'object' && value !== null) {
+		if (value.dataType === 'Map') {
+			return new Map(value.value);
+		}
+	}
+	return value;
+}
+
 function init() {
 
 	window.cursorLayer = new Konva.Layer();
@@ -94,7 +115,7 @@ function init() {
 	let universeModel = null;
 	if (localStorage.universe) {
 		console.log("Loading... " + localStorage.universe);
-		universeModel = UniverseModel.copy(JSON.parse(localStorage.universe));
+		universeModel = UniverseModel.copy(JSON.parse(localStorage.universe, jsonReviver));
 		if (!universeModel.activeWorld) universeModel = null;
 	}
 
@@ -108,7 +129,7 @@ function init() {
 
 		e.evt.preventDefault();
 
-		if(window.hoverNode) { 
+		if (window.hoverNode) {
 			window.currentSelection.rotation += 60 * (e.evt.deltaY < 0 ? -1 : 1);
 
 			if (window.hoverNode) {
@@ -135,20 +156,21 @@ function init() {
 
 	document.addEventListener('keydown', function (e) {
 		if (e.code === 'Escape' && e.shiftKey) {
-			if(confirm("Destory universe?")) {
+			if (confirm("Destory universe?")) {
 				console.log("Deleting: " + localStorage.universe);
 				delete localStorage.universe;
-	
+
 				window.location = window.location;
 			}
 
 			e.preventDefault();
 			return false;
 		} else if (e.code === 'KeyS') {
-			localStorage.universe = JSON.stringify(window.universe.getModel());
+
+			localStorage.universe = JSON.stringify(window.universe.getModel(), jsonReplacer);
 			console.log(localStorage.universe);
 		} else if (e.code === 'Tab') {
-			if(e.shiftKey) {
+			if (e.shiftKey) {
 				window.currentSelection.rotation -= 60;
 			} else {
 				window.currentSelection.rotation += 60;
@@ -162,7 +184,7 @@ function init() {
 			return false;
 		} else {
 			let buttonElement = document.querySelector('.button[data-shortcut="' + e.code + '"]');
-			if(buttonElement) onButtonClick(buttonElement);
+			if (buttonElement) onButtonClick(buttonElement);
 		}
 
 	});
@@ -197,8 +219,15 @@ function init() {
 	setInterval(function () {
 		let now = new Date().valueOf();
 
-		window.universe.update((now - lastUpdateTime) / 1000.0);
+		window.universe.model.update((now - lastUpdateTime) / 1000.0);
 		lastUpdateTime = now;
+	}, 100);
+	window.lastUpdateViewTime = new Date().valueOf();
+	setInterval(function () {
+		let now = new Date().valueOf();
+
+		window.universe.updateView((now - lastUpdateViewTime) / 1000.0);
+		lastUpdateViewTime = now;
 	}, 100);
 };
 

@@ -1,9 +1,10 @@
 import Konva from "konva";
-import { rotateAroundCenter } from "../../view/util/ViewManipulation";
-import { BORDER_BUFFER, BORDER_BUFFER_X, Y_COUNT } from "../../constants/Constants";
-import { Cell } from "../Cell";
+import { rotateAroundCenter } from "../view/util/ViewManipulation";
+import { BORDER_BUFFER, BORDER_BUFFER_X, Y_COUNT } from "../constants/Constants";
+import { Cell } from "../modelview/Cell";
+import CellModel from "../models/CellModel";
 
-export abstract class StaticImageCell extends Cell {
+export abstract class StaticImageCell<T extends CellModel> extends Cell<T> {
     protected abstract getImageUrl(): string;
 
     draw() {

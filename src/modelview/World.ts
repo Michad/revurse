@@ -9,14 +9,16 @@ import { X_COUNT, Y_COUNT } from "../constants/Constants";
 import { CellType, LayerType } from "../constants/Enums";
 import Base from "./Base";
 import Universe from "./Universe";
-import {newCell} from '../factory/ModelViewFactory';
+import { newCellModel, newMoleculeModel, newWorldModel } from '../factory/ModelFactory';
+import { newCell } from '../factory/ModelViewFactory';
 import FormulaModel from "../models/FormulaModel";
 
 class World implements Base<WorldModel> {
+    world: WorldModel;
     stage: Konva.Stage;
-    layers : Map<LayerType, Konva.Layer>;
-    cells: Array<Cell | null>;
-    grids: Array<Cell | null>;
+    layers: Map<LayerType, Konva.Layer>;
+    cells: Array<Cell<any> | null>;
+    grids: Array<Cell<any> | null>;
     molecules: Set<Molecule> = new Set();
     universe: Universe;
 
@@ -27,39 +29,41 @@ class World implements Base<WorldModel> {
         this.grids = Array.apply(null, Array(X_COUNT * Y_COUNT)).map(function () { });
         this.layers = new Map();
 
+        this.world = rawWorld || newWorldModel(this.universe.model, [], []);
+    }
+
+    initialize() {
         this.draw();
 
-        if (rawWorld) {
-            rawWorld.cells.forEach((c) => {
-                this.initCell(c);
+        if (this.world.cells.length > 0) {
+            this.world.cells.forEach((c) => {
+                if(c) this.initCell(c);
             });
 
-            rawWorld.molecules.forEach((m) => {
-                this.addMolecule(m, true);
+            this.world.molecules.forEach((m) => {
+                this.world.addMolecule(m, true);
             });
         } else {
-            this.initCell(CellModel.new(new GridCoordinate(0, 5).toIndex(), CellType.SOURCE.valueOf(), 60 ));
-            this.initCell(CellModel.new(new GridCoordinate(8, 3).toIndex(), CellType.SINK.valueOf(), 0 ));
-
+            this.initCellWithPropagation(newCellModel(this.world, CellType.SOURCE, new GridCoordinate(0, 5), 60));
+            this.initCellWithPropagation(newCellModel(this.world, CellType.SINK, new GridCoordinate(8, 3), 0));
         }
-
+    }
+    onChange(): void {
+        throw new Error("Method not implemented.");
     }
 
     addMolecule(moleculeModel: MoleculeModel, force: boolean = false) {
-        let c = this.findCell(new GridCoordinate(moleculeModel.cellIndex));
-        if( c) {
-            let m = new Molecule(this, moleculeModel, this.layers[LayerType.MOLECULE], c);
+        let c = this.findCell(moleculeModel.coordinate)!;
+        let m = new Molecule(this, moleculeModel, this.layers[LayerType.MOLECULE], c);
 
-            if (force || c.canAccept(m, null)) {
-                
-                this.molecules.add(m);
-            } 
-        }
+        this.molecules.add(m);
+        this.universe.registerModelView(m);
+        m.onChange();
     }
 
-    update(deltaT: number) {
-        this.cells.forEach((c) => c && c.update(deltaT));
-        this.molecules.forEach((m) => m && m.update(deltaT));
+    updateView(deltaT: number) {
+        this.cells.forEach((c) => c && c.updateView(deltaT));
+        this.molecules.forEach((m) => m && m.updateView(deltaT));
     }
 
     findCell(gridCoord: GridCoordinate) {
@@ -67,8 +71,8 @@ class World implements Base<WorldModel> {
     }
 
     initGridCell(gridCoord: GridCoordinate) {
-        let gridCell = newCell(this, CellModel.new(gridCoord.toIndex(), CellType.GRID, 0), this.layers[LayerType.GRID]);
-        
+        let gridCell = newCell(this, newCellModel(this.world, CellType.GRID, gridCoord, 0), this.layers[LayerType.GRID]);
+
         this.grids[gridCoord.toIndex()] = gridCell;
     }
 
@@ -77,10 +81,10 @@ class World implements Base<WorldModel> {
         switch ((<any>window).currentSelection.tool) {
             case "place":
                 this.removeCell(gridCoord);
-                this.initCell(CellModel.new(gridCoord.toIndex(), (<any>window).currentSelection.cellType, (<any>window).currentSelection.rotation ?? 0, (<any>window).currentSelection.img()));
+                this.initCellWithPropagation(newCellModel(this.world, (<any>window).currentSelection.cellType, gridCoord, (<any>window).currentSelection.rotation ?? 0, (<any>window).currentSelection.img()));
                 break;
             case "molecule":
-                this.addMolecule(MoleculeModel.new(gridCoord.toIndex(), 0, 0, FormulaModel.newUnary(Math.floor(Math.random() * 1000))));
+                this.addMolecule(newMoleculeModel(this.world, gridCoord, 0, 0, FormulaModel.newUnary(Math.floor(Math.random() * 1000))));
                 break;
             case "erase":
                 this.removeCell(gridCoord);
@@ -89,14 +93,21 @@ class World implements Base<WorldModel> {
     }
 
     initCell(cellModel: CellModel) {
-        let gridCoord = new GridCoordinate(cellModel.index);
+        let gridCoord = cellModel.coordinate;
 
         let cell = newCell(this, cellModel, this.layers[LayerType.CELL]);
 
         this.cells[gridCoord.toIndex()] = cell;
+
+        this.universe.registerModelView(cell);
+        cell.onChange();
     }
 
-    getLayer(layerId : LayerType) : Konva.Layer {
+    initCellWithPropagation(cellModel: CellModel) {
+        this.world.addCell(cellModel);
+    }
+
+    getLayer(layerId: LayerType): Konva.Layer {
         return this.layers[layerId];
     }
 
@@ -134,10 +145,7 @@ class World implements Base<WorldModel> {
     }
 
     getModel(): WorldModel {
-        return WorldModel.new(
-            this.cells.filter((m) => m).map((c, i) => c!.getModel()),
-            [...this.molecules.values()].map((m) => m.getModel())
-        );
+        return this.world;
     }
 
     initializeGrid() {
@@ -149,7 +157,7 @@ class World implements Base<WorldModel> {
             for (let y = 0; y < Y_COUNT; y++) {
                 let c = new GridCoordinate(x, y);
 
-                if(c.isInner() || c.isEdge()) this.initGridCell(c);
+                if (c.isInner() || c.isEdge()) this.initGridCell(c);
             }
         }
 

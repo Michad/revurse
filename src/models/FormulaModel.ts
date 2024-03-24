@@ -70,6 +70,10 @@ export default class FormulaModel implements BaseModel {
     constructor() {
         this.components = [];
     }
+    
+    update(deltaT: number): void {
+        //Do nothing
+    }
 
     static newUnary(atomicNumber : number) {
         let form = new FormulaModel();

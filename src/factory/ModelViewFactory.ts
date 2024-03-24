@@ -3,22 +3,22 @@ import { CellType } from "../constants/Enums";
 import CellModel from "../models/CellModel";
 import { Cell } from "../modelview/Cell";
 import World from "../modelview/World";
-import { GridCell } from "../modelview/cells/GridCell";
-import { CombineCell } from "../modelview/cells/CombineCell";
-import { MetaCell } from "../modelview/cells/MetaCell";
-import { SinkCell } from "../modelview/cells/SinkCell";
-import { SourceCell } from "../modelview/cells/SourceCell";
-import { SplitCell } from "../modelview/cells/SplitCell";
-import { StraightCell } from "../modelview/cells/StraightCell";
-import { TurnLeftCell } from "../modelview/cells/TurnLeftCell";
-import { TurnRightCell } from "../modelview/cells/TurnRightCell";
-import { MergeCell } from "../modelview/cells/MergeCell";
-import { FuseCell } from "../modelview/cells/FuseCell";
+import { GridCell } from "../cells/GridCell";
+import { CombineCell } from "../cells/CombineCell";
+import { MetaCell } from "../cells/MetaCell";
+import { SinkCell } from "../cells/SinkCell";
+import { SourceCell } from "../cells/SourceCell";
+import { SplitCell } from "../cells/SplitCell";
+import { StraightCell } from "../cells/StraightCell";
+import { TurnLeftCell } from "../cells/TurnLeftCell";
+import { TurnRightCell } from "../cells/TurnRightCell";
+import { MergeCell } from "../cells/MergeCell";
+import { FuseCell } from "../cells/FuseCell";
 import GridCoordinate from "../modelview/util/GridCoordinate";
 
 
 export function newCell(world: World, model: CellModel, layer: Konva.Layer, overrideView: Konva.Node | null = null) {
-    let cell: Cell;
+    let cell: Cell<any>;
     switch (model.type) {
         case CellType.STRAIGHT:
             cell = new StraightCell();
@@ -57,7 +57,6 @@ export function newCell(world: World, model: CellModel, layer: Konva.Layer, over
 
     cell.world = world;
     cell.model = model;
-    cell.coordinate = new GridCoordinate(model.index);
     cell.layer = layer;
     cell.molecules = [];
     if (overrideView) {

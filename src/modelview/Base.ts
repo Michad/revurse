@@ -6,9 +6,7 @@ import BaseModel from "../models/BaseModel";
  */
 export default interface Base<T extends BaseModel> {
     /**
-     * Returns back the data model for the current state of this MV.  Might not be the same Model as passed in at construction.
-     * Used primarily for serialization. This isn't usually a simple getter, it requires reconstructing models, so don't call
-     * for simple state querying
+     * Returns back the model of this modelview
      */
     getModel(): T
 
@@ -25,5 +23,7 @@ export default interface Base<T extends BaseModel> {
     /**
      * Main game-loop state in-place state update for the entity
      */
-    update(deltaT: number): void
+    updateView(deltaT: number): void
+
+    onChange(): void
 }

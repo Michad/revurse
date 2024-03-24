@@ -1,15 +1,31 @@
 import Konva from "konva";
-import GridCoordinate from "../util/GridCoordinate";
-import Molecule from "../Molecule";
-import { Cell } from "../Cell";
-import { CellSlot } from "../../constants/Enums";
+import GridCoordinate from "../modelview/util/GridCoordinate";
+import Molecule from "../modelview/Molecule";
+import { Cell } from "../modelview/Cell";
+import { CellSlot } from "../constants/Enums";
+import CellModel from "../models/CellModel";
+import MoleculeModel from "../models/MoleculeModel";
+
+export class GridCellModel extends CellModel {
 
 
-export class GridCell extends Cell {
+    findDestination(offset: number): GridCoordinate | null {
+        return null;
+    }
+
+    canAccept(molecule: MoleculeModel, fromCell: CellModel | null): boolean {
+        throw new Error("Grid Cells can't accept molecules");
+    }
+    onArrival(molecule: MoleculeModel, fromCell: CellModel | null, force: boolean): CellSlot | null {
+        throw new Error("Grid Cells can't accept molecules");
+    }
+}
+
+export class GridCell extends Cell<GridCellModel> {
     draw() {
         let screenCoord = this.calculateScreenCoord();
         let screenCalc = this.world.universe.getScreenCalculations();
-        let isEdge = this.coordinate.isEdge();
+        let isEdge = this.model.coordinate.isEdge();
 
         let hex = new Konva.RegularPolygon({
             x: screenCoord.x,
@@ -37,7 +53,7 @@ export class GridCell extends Cell {
         // });
         if (!isEdge) {
             hex.on('click', (e) => {
-                this.world.clickCell(this.coordinate);
+                this.world.clickCell(this.model.coordinate);
             });
 
             hex.on('rightclick', (e) => {
@@ -46,17 +62,6 @@ export class GridCell extends Cell {
 
         this.view = hex;
         this.layer.add(hex);
-    }
-
-    findDestination(offset: number): GridCoordinate | null {
-        return null;
-    }
-
-    canAccept(molecule: Molecule, fromCell: Cell | null): boolean {
-        throw new Error("Grid Cells can't accept molecules");
-    }
-    onArrival(molecule: Molecule, fromCell: Cell | null, force: boolean): CellSlot | null {
-        throw new Error("Grid Cells can't accept molecules");
     }
 
 }
