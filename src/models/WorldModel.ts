@@ -6,7 +6,7 @@ import GridCoordinate from "../modelview/util/GridCoordinate";
 
 export default class WorldModel implements BaseModel {
     _universe: UniverseModel
-    cells: Array<CellModel>
+    cells: Array<CellModel | null>
     molecules: Array<MoleculeModel>
 
     constructor() {
@@ -19,13 +19,17 @@ export default class WorldModel implements BaseModel {
         this.molecules.forEach((m) => m && m.update(deltaT));
     }
 
-    findCell(gridCoord: GridCoordinate) : CellModel {
+    findCell(gridCoord: GridCoordinate) : CellModel | null {
         return this.cells[gridCoord.toIndex()];
     }
 
     addCell(cell: CellModel) {
         this.cells[cell.coordinate.toIndex()] = cell;
         this._universe.onModelChange(cell);
+    }
+
+    removeCell(cell: CellModel) {
+        this.cells[cell.coordinate.toIndex()] = null;
     }
     
     addMolecule(moleculeModel: MoleculeModel, force: boolean = false) : MoleculeModel | null {

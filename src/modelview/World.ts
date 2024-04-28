@@ -129,8 +129,9 @@ class World implements Base<WorldModel> {
         this.layers[LayerType.MOLECULE].remove();
     }
 
-    removeMolecule(molecule) {
+    removeMolecule(molecule : Molecule) {
         this.molecules.delete(molecule);
+        this.world.removeMolecule(molecule.model);
         molecule.remove();
     }
 
@@ -138,8 +139,9 @@ class World implements Base<WorldModel> {
         let curCell = this.cells[gridCoord.toIndex()];
         if (curCell) {
             curCell.remove();
+            this.world.removeCell(curCell.model);
+            this.molecules.forEach(m => m.currentCell == curCell && this.removeMolecule(m));
         }
-        this.molecules.forEach(m => m.currentCell == curCell && this.removeMolecule(m));
 
         this.cells[gridCoord.toIndex()] = null;
     }

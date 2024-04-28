@@ -84,9 +84,9 @@ abstract class CellModel implements BaseModel {
      */
     onArrival(molecule: MoleculeModel, fromCell: CellModel | null, force: boolean): CellSlot | null {
         if (force) {
-            let offset = molecule.coordinate.toIndex();
-            this._molecules[offset] = molecule;
-            return offset;
+            let slot = molecule.cellSlot;
+            this._molecules[slot] = molecule;
+            return slot;
         } else {
             let dir = this.findSlotForNeighbor(fromCell!.coordinate);
 

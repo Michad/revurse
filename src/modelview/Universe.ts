@@ -32,7 +32,7 @@ export default class Universe implements Base<UniverseModel> {
             model._onChangeCallback = (m, b) => this.onModelChange(m, b);
             this.activeWorld = new World(this.stage, this, model?.worlds.get(model?.activeWorld)!);
             this.activeWorldName = model?.activeWorld;
-            this.savedWorldModels = model?.worlds;
+            this.savedWorldModels = new Map(model?.worlds);
             this.savedWorldModels.delete(this.activeWorldName);
             this.model = model;
         } else {
@@ -68,7 +68,7 @@ export default class Universe implements Base<UniverseModel> {
                     world.removeCell(model.coordinate);
                 } else if (model instanceof MoleculeModel) {
                     let world = (modelview as Molecule).world;
-                    world.removeMolecule(modelview);
+                    world.removeMolecule(modelview as Molecule);
                 }
             } else {
                 this.modelToModelViewCache.get(model)!.onChange()

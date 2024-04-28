@@ -75,7 +75,9 @@ class Molecule implements Base<MoleculeModel> {
 		pos = this.currentCell.calculateSlotScreenCoord(this.model.cellSlot);
 		if (nextCellModel) {
 			let nextCell = this.world.findCell(nextCellModel[0].coordinate);
-			pos = pos.interpolate(nextCell!.calculateSlotScreenCoord(nextCellModel[1]), this.model.transition);
+			if(nextCell) {
+				pos = pos.interpolate(nextCell!.calculateSlotScreenCoord(nextCellModel[1]), this.model.transition);
+			}
 		} 
 
 		//console.log(JSON.stringify(pos));

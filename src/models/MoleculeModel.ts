@@ -24,7 +24,7 @@ class MoleculeModel implements BaseModel {
 			this.cellSlot = newCell.onArrival(this, null, true)!;
 			this.coordinate = newCell.coordinate;
 		} else {
-			let lastCell = this._world.findCell(this.coordinate);
+			let lastCell = this._world.findCell(this.coordinate)!;
 			let offset = newCell.onArrival(this, lastCell, false);
 
 			if (offset !== null) {
@@ -38,7 +38,7 @@ class MoleculeModel implements BaseModel {
 	}
 
 	findNextStep() : [CellModel, CellSlot] | null {
-        let currentCell = this._world.findCell(this.coordinate);
+        let currentCell = this._world.findCell(this.coordinate)!;
 		let candidate = currentCell.findDestination(this.cellSlot);
 
 		if(candidate instanceof GridCoordinate) {
@@ -52,7 +52,7 @@ class MoleculeModel implements BaseModel {
 	}
 
 	update(deltaT : number) {
-        let currentCell = this._world.findCell(this.coordinate);
+        let currentCell = this._world.findCell(this.coordinate)!;
 		let nextStep = this.findNextStep();
 		if (nextStep) {
 			this.transition += deltaT * SPEED;
